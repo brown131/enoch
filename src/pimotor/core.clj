@@ -1,6 +1,7 @@
 (ns pimotor.core
   (:import [com.pi4j.wiringpi Gpio]
-           [com.pi4j.io.gpio GpioFactory RaspiPin PinState]))
+           [com.pi4j.io.gpio GpioFactory RaspiPin PinState]
+           [com.pi4j.component.motor.impl GpioStepperMotorComponent]))
 
 (def gpio (GpioFactory/getInstance))
 
@@ -14,21 +15,26 @@
 	         3 RaspiPin/GPIO_25
 	         4 RaspiPin/GPIO_27})
 
-(def stepper-pins {1 {:en1 RaspiPin/GPIO_00 :en2 RaspiPin/GPIO_06
-                      :c1 RaspiPin/GPIO_02 :c2 RaspiPin/GPIO_03 :c3 RaspiPin/GPIO_05 :c4 RaspiPin/GPIO_04}
-                   2 {:en1 RaspiPin/GPIO_12 :en2 RaspiPin/GPIO_26
-                      :c1 RaspiPin/GPIO_13 :c2 RaspiPin/GPIO_14 :c3 RaspiPin/GPIO_10 :c3 RaspiPin/GPIO_11}})
+(def stepper-pins {1 {:controller1 RaspiPin/GPIO_02
+                      :controller2 RaspiPin/GPIO_03
+                      :controller3 RaspiPin/GPIO_05
+                      :controller4 RaspiPin/GPIO_04}
+                   2 {:controller1 RaspiPin/GPIO_13
+                      :controller2 RaspiPin/GPIO_14
+                      :controller3 RaspiPin/GPIO_10
+                      :controller4 RaspiPin/GPIO_11}})
 
 (declare sensor-ir-check sensor-sonic-check)
 (def sensor-pins {:ir1 {:echo RaspiPin/GPIO_07 :check sensor-ir-check}
-                  :ir2 {:echo RaspiPin/GPIO_01 :check sensor-id-check}
-                  :ultrasonic {:echo RaspiPin/GPIO_22 :check sonic-check :trigger 29}})
+                  :ir2 {:echo RaspiPin/GPIO_01 :check sensor-ir-check}
+                  :ultrasonic {:echo RaspiPin/GPIO_22 :check sensor-sonic-check :trigger 29}})
                       
 (def pwm-pin RaspiPin/GPIO_01)
 
 (def motors (atom nil))
 (def arrows (atom nil))
 (def steppers (atom nil))
+(def stepper-controllers (atom nil))
 (def sensors (atom nil))
 (def pwm (atom nil))
 (def motor-test (atom false))
@@ -42,9 +48,9 @@
 
 (defn arrow-init "Initialize an arrow with an id of 1-4."
   [id]
-  (when-not (get arrows id)
+  (when-not (get @arrows id)
     (swap! arrows assoc id (.provisionDigitalOutputPin gpio (get arrow-pins id) (str "Arrow" id) PinState/LOW))
-    (println "arrow 1" (get @arrows 1))))
+    (println "arrow" id (get @arrows 1))))
 
 (defn arrow-on "Lights up an arrow by id."
   [id] (.high (get @arrows id)))
@@ -59,7 +65,7 @@
 (defn motor-init "Initialize a motor with an id of 1-4."
   [id]
   (when-not (get @motors id)
-    (make-arrow id)
+    (arrow-init id)
     (reset! pwm (.provisionPwmOutputPin gpio pwm-pin))
     (.setPwmRange @pwm 100)
     (.setPwmClock gpio 50)
@@ -78,7 +84,7 @@
     (do
       (.setPwm @pwm speed)
       (.high (get @motors [id :forward]))
-      (.low (get @motors [id :reverse))))))
+      (.low (get @motors [id :reverse])))))
 
 (defn motor-reverse "Start the motor turning in its configured \"reverse\" direction."
   [id speed]
@@ -88,7 +94,7 @@
     (do
       (.setPwm @pwm speed)
       (.low (get @motors [id :forward]))
-      (.high (get @motors [id :reverse))))))
+      (.high (get @motors [id :reverse])))))
       
 
 (defn motor-stop "Stop power to the motor."
@@ -97,7 +103,7 @@
   (arrow-off id)
   (.setPwm @pwm 0)
   (.low (get @motors [id :forward]))
-  (.low (get @motors [id :reverse))))
+  (.low (get @motors [id :reverse])))
   
 (defn motor-speed "Control speed of a motor."
   [id speed]
@@ -125,65 +131,55 @@
 
 ;;; Stepper
 
-
-  (defn stepper-init "Initialize a stepper motor with an id 1-2."
+(defn stepper-init "Initialize a stepper motor with an id 1-2."
   [id]
-  (swap! steppers assoc id {:en1 (.provisionDigitalOutputPin gpio (get-in motor-pins [id :en1])
-                                                             (str "StepperEN1" id) PinState/HIGH)
-                            :en2 (.provisionDigitalOutputPin gpio (get-in motor-pins [id :en2])
-                                                             (str "StepperEN2" id) PinState/HIGH)
-                            :c1 (.provisionDigitalOutputPin gpio (get-in motor-pins [id :c1])
-                                                            (str "StepperC1" id) PinState/LOW)
-                            :c2 (.provisionDigitalOutputPin gpio (get-in motor-pins [id :c2)
-                                                            (str "StepperC2" id) PinState/LOW)
-                            :c3 (.provisionDigitalOutputPin gpio (get-in motor-pins [id :c3])
-                                                            (str "StepperC3" id) PinState/LOW)
-                            :c4 (.provisionDigitalOutputPin gpio (get-in motor-pins [id :c4])
-                                                            (str "StepperC4" id) PinState/LOW)})))
+  (swap! stepper-controllers assoc id
+         (into-array [(.provisionDigitalOutputPin gpio (get-in stepper-pins [id :controller1])
+                                                  (str "StepperController1" id) PinState/LOW)
+                      (.provisionDigitalOutputPin gpio (get-in stepper-pins [id :controller2])
+                                                  (str "StepperController2" id) PinState/LOW)
+                      (.provisionDigitalOutputPin gpio (get-in stepper-pins [id :controller3])
+                                                  (str "StepperController3" id) PinState/LOW)
+                      (.provisionDigitalOutputPin gpio (get-in stepper-pins [id :controller4])
+                                                  (str "StepperController4" id) PinState/LOW)]))
+  (.setShutdownOptions gpio true com.pi4j.io.gpio.PinState/LOW (get @stepper-controllers id))
+  (swap! steppers assoc id (GpioStepperMotorComponent. (get @stepper-controllers id))))
 
 (defn stepper-set-step "Set steps of stepper motor."
-  [id wire1-on wire2-on wire2-on wire4-on]
-  (let [wire-set (fn [c w] (if w
-                             (.high gpio (get-in @stepper [id c]))
-                             (.low gpio (get-in @stepper [id c]))))]
-    (wire-set :c1 wire1-on)
-    (wire-set :c2 wire2-on)
-    (wire-set :c3 wire3-on)
-    (wire-set :c4 wire4-on)))
+  [id wire1-on wire2-on wire3-on wire4-on]
+  (let [wire-set (fn [c w] (if (zero? w)
+                             (.low gpio (get-in @steppers [id c]))
+                             (.high gpio (get-in @steppers [id c]))))]
+    (wire-set :controller1 wire1-on)
+    (wire-set :controller2 wire2-on)
+    (wire-set :controller3 wire3-on)
+    (wire-set :controller4 wire4-on)))
 
 (defn stepper-forward "Rotate stepper in forward direction."
   [id delay steps]
-  (dotimes [i steps]
-    (stepper-set-set 1 0 0 0)
-    (Thread/sleep delay)
-    (stepper-set-set 0 1 0 0)
-    (Thread/sleep delay)
-    (stepper-set-set 0 0 1 0)
-    (Thread/sleep delay)
-    (stepper-set-set 0 0 0 1)
-    (Thread/sleep delay)))
+  (let [stepper (get @steppers id)]
+    (.setStepInterval stepper delay)
+    (.setStepSequence stepper (byte-array [8 4 2 1]))
+    (.setStepsPerRevolution stepper 180)
+    (.step stepper steps)))
 
 (defn stepper-backward "Rotate stepper in backward direction."
   [id delay steps]
-  (dotimes [i steps]
-    (stepper-set-set 0 0 0 1)
-    (Thread/sleep delay)
-    (stepper-set-set 0 0 1 0)
-    (Thread/sleep delay)
-    (stepper-set-set 0 1 0 0)
-    (Thread/sleep delay)
-    (stepper-set-set 1 0 0 0)
-    (Thread/sleep delay)))
+  (let [stepper (get @steppers id)]
+    (.setStepInterval stepper delay)
+    (.setStepSequence stepper (byte-array [1 2 4 8]))
+    (.setStepsPerRevolution stepper 180)
+    (.step stepper steps)))
     
 (defn stepper-stop "Stops power to the motor."
   [id]
-  (mapv #(.low gpio (get-in @stepper [id %])) [:c1 :c2 :c3 :c4]))
+  (mapv #(.low gpio (get-in @steppers [id %])) [:controller1 :controller2 :controller3 :controller4]))
 
 
 ;;; Sensor
 
 
-(defn sensor-init "Initialize a sensor by id.")
+(defn sensor-init "Initialize a sensor by id."
   [id boundary]
   (swap! sensors assoc type (assoc (get sensor-pins id) :boundary boundary :last-read 0))
   (when (= id :ultrasonic)
