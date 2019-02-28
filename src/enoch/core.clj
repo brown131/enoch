@@ -1,5 +1,5 @@
 (ns enoch.core
-  (:require [pimotor.core :refer :all])
+  (:require [enoch.motor-shield :refer :all])
   (:gen-class))
 
 (defn -main [& args]
