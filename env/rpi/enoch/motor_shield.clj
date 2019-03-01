@@ -1,33 +1,32 @@
 (ns enoch.motor-shield
   "API for Maker-Sphere Motor-Shield v1 to be used on the Raspberry Pi."
-  (:import [com.pi4j.wiringpi Gpio]
-           [com.pi4j.io.gpio GpioFactory RaspiPin PinState]
-           [com.pi4j.component.servo.impl RPIServoBlasterProvider]))
+    (:import [com.pi4j.wiringpi Gpio]
+             [com.pi4j.io.gpio GpioFactory RaspiPin PinState]
+             [com.pi4j.component.servo.impl RPIServoBlasterProvider]))
 
 (def gpio (GpioFactory/getInstance))
 
-#_(def pwm (.provisionPwmOutputPin gpio RaspiPin/GPIO_01))
-
-#_(def motor-pins {1 {:enable RaspiPin/GPIO_26 :forward RaspiPin/GPIO_10 :reverse RaspiPin/GPIO_11}
+(def motor-pins {1 {:enable RaspiPin/GPIO_26 :forward RaspiPin/GPIO_10 :reverse RaspiPin/GPIO_11}
                  2 {:enable RaspiPin/GPIO_12 :forward RaspiPin/GPIO_13 :reverse RaspiPin/GPIO_14}
-		 3 {:enable RaspiPin/GPIO_06 :forward RaspiPin/GPIO_04 :reverse RaspiPin/GPIO_05}
+  	         3 {:enable RaspiPin/GPIO_06 :forward RaspiPin/GPIO_04 :reverse RaspiPin/GPIO_05}
 		 4 {:enable RaspiPin/GPIO_00 :forward RaspiPin/GPIO_03 :reverse RaspiPin/GPIO_02}})
-	 
+
 (def arrow-pins {1 RaspiPin/GPIO_23
                  2 RaspiPin/GPIO_24
                  3 RaspiPin/GPIO_25
                  4 RaspiPin/GPIO_27})
 
-#_(def servo-pins {1 RaspPin/GPIO_07
-                 2 RaspPin/GPIO_01})
+(def servo-pins {1 RaspiPin/GPIO_07
+                 2 RaspiPin/GPIO_01})
 
-#_(def ultrasonic-pins {1 {:echo RaspiPin/GPIO_22 :trigger RaspPin/GPIO_21}})
+(def ultrasonic-pins {1 {:echo RaspiPin/GPIO_22 :trigger RaspiPin/GPIO_21}})
 
 (def motors (atom nil))
 (def arrows (atom nil))
 (def servos (atom nil))
 (def ultrasonic (atom nil))
 (def motor-test (atom false))
+(def pwm (atom nil))
 
 (defn gpio-shutdown "Deallocate GPIO resources."
   [] (.shutdown gpio))
@@ -52,10 +51,11 @@
 ;;; Motor
 
 
-#_(defn motor-init "Initialize a motor with an id of 1-4."
+(defn motor-init "Initialize a motor with an id of 1-4."
   [id]
   (when-not (get @motors id)
-    (make-arrow id)
+    (arrow-init id)
+    (reset! pwm (.provisionPwmOutputPin gpio RaspiPin/GPIO_01))
     (.setPwmRange @pwm 100)
     (.setPwmClock gpio 50)
     (swap! motors assoc id {:enable  (.provisionDigitalOutputPin gpio (get-in motor-pins [id :enable])
@@ -65,7 +65,7 @@
                             :reverse (.provisionDigitalOutputPin Gpio (get-in motor-pins [id :reverse])
                                                                  (str "MotorReverse" id) PinState/LOW)})))
 
-#_(defn motor-forward "Start the motor turning in its configured \"forward\" direction."
+(defn motor-forward "Start the motor turning in its configured \"forward\" direction."
   [id speed]
   (println "Forward")
   (if @motor-test
@@ -73,9 +73,9 @@
     (do
       (.setPwm @pwm speed)
       (.high (get @motors [id :forward]))
-      (.low (get @motors [id :reverse))))))
+      (.low (get @motors [id :reverse])))))
 
-#_(defn motor-reverse "Start the motor turning in its configured \"reverse\" direction."
+(defn motor-reverse "Start the motor turning in its configured \"reverse\" direction."
   [id speed]
   (println "Reverse")
   (if @motor-test
@@ -83,18 +83,17 @@
     (do
       (.setPwm @pwm speed)
       (.low (get @motors [id :forward]))
-      (.high (get @motors [id :reverse))))))
-      
+      (.high (get @motors [id :reverse])))))
 
-#_(defn motor-stop "Stop power to the motor."
+(defn motor-stop "Stop power to the motor."
   [id]
   (println "Stop")
   (arrow-off id)
   (.setPwm @pwm 0)
   (.low (get @motors [id :forward]))
-  (.low (get @motors [id :reverse))))
-  
-#_(defn motor-speed "Control speed of a motor."
+  (.low (get @motors [id :reverse])))
+
+(defn motor-speed "Control speed of a motor."
   [id speed]
   (.setPwm @pwm speed))
 
@@ -102,11 +101,11 @@
 ;;; Servo
 
 
-(#_defn servo-init [id]
+(defn servo-init [id]
   (let [provider (RPIServoBlasterProvider.)]
     (swap! servos assoc id (.getServoDriver provider (get servo-pins id)))))
 
-#_(defn servo-rotate
+(defn servo-rotate
   "Rotate the servo by the range. Example: (servo-rotate 1 10 #(range 90 30 -1))"
   [id wait range-fn]
   (doseq [i (range-fn)]
@@ -117,11 +116,11 @@
 ;;; Ultrasonic
 
 
-#_(defn ultrasonic-init "Initialize a sensor by id."
+(defn ultrasonic-init "Initialize a sensor by id."
   [id boundary]
   (reset! ultrasonic {:boundary boundary :last-read 0})
   (println "trigger")
-  (.provisionDigitalOutputPin gpio (get-in ultrasonic-pins [1 :echo]} (str "Ultrasonic" id) PinState/LOW)))
+  (.provisionDigitalOutputPin gpio (get-in ultrasonic-pins [1 :echo]) (str "Ultrasonic" id) PinState/LOW))
 
 (defn ultrasonic-check [id]
   )
