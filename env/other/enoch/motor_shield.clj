@@ -1,6 +1,5 @@
-(ns enoch.motor-shield)
-
-;;;; Dummy API for motor-shield to be used on plstforms other than the Raspberry Pi.
+(ns enoch.motor-shield
+  "Dummy API for Maker-Sphere Motor-Shield v1 to be used on platforms other than the Raspberry Pi.")
 
 (defn gpio-shutdown [] (println "gpio shutdown"))
 
