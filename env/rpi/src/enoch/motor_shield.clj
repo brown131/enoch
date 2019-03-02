@@ -19,8 +19,6 @@
 (def servo-pins {1 RaspiPin/GPIO_07
                  2 RaspiPin/GPIO_01})
 
-(def pwm_pin RaspiPin/GPIO_24)
-
 (def ultrasonic-pins {1 {:echo RaspiPin/GPIO_22 :trigger RaspiPin/GPIO_21}})
 
 (def motors (atom nil))
@@ -109,18 +107,18 @@
 
 (defn servo-init [id]
   (when-not (get @servos id)
-    (swap! servos assoc id (.provisionPwmOutputPin gpio pwm_pin (str "Servo" id)))
-    #_(Gpio/wiringPiSetupGpio)
-    #_(Gpio/pinMode (.getAddress (get servo-pins id)) Gpio/PWM_OUTPUT)
-    #_(Gpio/pwmSetMode Gpio/PWM_MODE_MS)
-    #_(Gpio/pwmSetClock 384)
-    #_(Gpio/pwmSetRange 1000)))
+    (swap! servos assoc id (.provisionSoftPwmOutputPin gpio (get servo-pins id)))
+    (.setPwmRange (get @servos id) 900)))
   
 (defn servo-rotate
-  "Rotate the servo by the range. Example: (servo-rotate 1 10 #(range 90 30 -1))"
-  [id distance]
+  "Rotate the servo by the range. Range is from 0 to 180 (degrees).
+   Example: (servo-rotate 1 10 #(range 90 30 -1))"
+  [id wait range-fn]
   (servo-init id)
-  #_(Gpio/pwmWrite (.getAddress (get servo-pins id)) distance))
+  (doseq [dist (range-fn)]
+    (.setPwm (get @servos id) dist)
+    (Thread/sleep wait)))
+
 
 ;;; Ultrasonic
 

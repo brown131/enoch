@@ -20,6 +20,7 @@
     (motor-stop i))
    (gpio-shutdown))
 
-(deftest test-servos
-  (doseq [i (range 1 3)]
-    (servo-rotate i 15)))
+(deftest test-servo
+  (servo-rotate 1 100 #(range 0 (inc 10) 1))
+  (servo-rotate 1 100 #(range (inc 10) 0 -1)))
+  
