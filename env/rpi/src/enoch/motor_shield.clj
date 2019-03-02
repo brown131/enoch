@@ -107,17 +107,22 @@
 
 (defn servo-init [id]
   (when-not (get @servos id)
-    (swap! servos assoc id (.provisionSoftPwmOutputPin gpio (get servo-pins id)))
-    (.setPwmRange (get @servos id) 900)))
+    (swap! servos assoc id (.getAddress (get servo-pins id)))
+    (when-not (zero? (SoftPwm/softPwmCreate (get @servos id) 50 50))
+      (println "servo init error"))
+    (Thread/sleep 100)))
   
 (defn servo-rotate
-  "Rotate the servo by the range. Range is from 0 to 180 (degrees).
+  "Rotate the servo by the range. Range is from 0 to 100.
    Example: (servo-rotate 1 10 #(range 90 30 -1))"
   [id wait range-fn]
   (servo-init id)
-  (doseq [dist (range-fn)]
-    (.setPwm (get @servos id) dist)
+  (doseq [i (range-fn)]
+    (SoftPwm/softPwmWrite (get @servos id) i)
     (Thread/sleep wait)))
+
+(defn servo-stop [id]
+  (SoftPwm/softPwmStop (get @servos id)))
 
 
 ;;; Ultrasonic

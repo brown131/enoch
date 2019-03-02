@@ -5,7 +5,17 @@
 
 ;; Require packages.
 (require '[enoch.motor-shield :refer :all])   
+;'
 
-(servo-rotate 1 100 #(range 0 (inc 10) 1))
-(servo-rotate 1 100 #(range (inc 10) 0 -1))
+;; Used to adjust alignment
+(def halign -20)
+(def valign -10)
+(def step 1)
 
+(defn arc [deg] (+ 2.5 (/ deg 18.0)))
+
+;; Horizontal
+(servo-rotate 1 100 #(range 90 30 (* -1 step)))
+(servo-rotate 1 100 #(range 30 (+ 90 halign) step))
+
+(servo-stop 1)
