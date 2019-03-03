@@ -8,14 +8,20 @@
 ;'
 
 ;; Used to adjust alignment
-(def halign -20)
-(def valign -10)
+(def halign 50)
+(def valign 50)
 (def step 1)
-
-(defn arc [deg] (+ 2.5 (/ deg 18.0)))
+(def wait 30)
 
 ;; Horizontal
-(servo-rotate 1 100 #(range 90 30 (* -1 step)))
-(servo-rotate 1 100 #(range 30 (+ 90 halign) step))
+(servo-rotate 1 wait #(range 180 70 (* -1 step)))
+(servo-rotate 1 wait #(range 70 130 step))
+(servo-stop 1)  
 
-(servo-stop 1)
+;; Vertical
+(servo-rotate 2 wait #(range 180 70 (* -1 step)))
+(servo-rotate 2 wait #(range 70 130 step))
+(servo-stop 2)
+
+
+  

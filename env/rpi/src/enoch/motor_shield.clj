@@ -1,7 +1,7 @@
-(ns enoch.motor-shield
-  "API for Maker-Sphere Motor-Shield v1 to be used on the Raspberry Pi."
+(ns enoch.motor-shield  "API for Maker-Sphere Motor-Shield v1 to be used on the Raspberry Pi."
   (:import [com.pi4j.wiringpi Gpio SoftPwm]
            [com.pi4j.io.gpio GpioFactory RaspiPin PinState Pin]
+	   [com.pi4j.component.servo ServoDriver ServoProvider]
            [com.pi4j.component.servo.impl RPIServoBlasterProvider]))
 
 (def gpio (GpioFactory/getInstance))
@@ -15,9 +15,6 @@
                  2 RaspiPin/GPIO_24
                  3 RaspiPin/GPIO_25
                  4 RaspiPin/GPIO_27})
-
-(def servo-pins {1 RaspiPin/GPIO_07
-                 2 RaspiPin/GPIO_01})
 
 (def ultrasonic-pins {1 {:echo RaspiPin/GPIO_22 :trigger RaspiPin/GPIO_21}})
 
@@ -107,24 +104,25 @@
 
 (defn servo-init [id]
   (when-not (get @servos id)
-    (swap! servos assoc id (.getAddress (get servo-pins id)))
-    (when-not (zero? (SoftPwm/softPwmCreate (get @servos id) 50 50))
-      (println "servo init error"))
-    (Thread/sleep 100)))
-  
+    (let [pin (dec id)
+          servo-provider (RPIServoBlasterProvider.)]
+      (println pin servo-provider)
+      (swap! servos assoc id (.getServoDriver servo-provider (.get (.getDefinedServoPins servo-provider) pin))))))
+
 (defn servo-rotate
   "Rotate the servo by the range. Range is from 0 to 100.
    Example: (servo-rotate 1 10 #(range 90 30 -1))"
   [id wait range-fn]
   (servo-init id)
   (doseq [i (range-fn)]
-    (SoftPwm/softPwmWrite (get @servos id) i)
+    (.setServoPulseWidth (get @servos id) i)
     (Thread/sleep wait)))
 
-(defn servo-stop [id]
-  (SoftPwm/softPwmStop (get @servos id)))
-
-
+(defn servo-stop
+  "Stop the servo motor."
+  [id]
+  (.setServoPulseWidth (get @servos id) 0))
+  
 ;;; Ultrasonic
 
 
