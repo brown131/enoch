@@ -2,14 +2,14 @@
   (:require [clojure.test :refer :all]
             [enoch.motor-shield :refer :all]))
 
-#_(deftest test-arrows
+(deftest test-arrows
   (doseq [i (range 1 5)]
     (arrow-on i)
     (Thread/sleep 500)
     (arrow-off i))
   (gpio-shutdown))
 
-#_(deftest test-motor-1
+(deftest test-motor-1
   (doseq [i (range 1 5)]
     (motor-forward i 40)
     (Thread/sleep 1000)
@@ -20,7 +20,31 @@
     (motor-stop i))
    (gpio-shutdown))
 
-(deftest test-servo
-  (servo-rotate 1 100 #(range 0 (inc 10) 1))
-  (servo-rotate 1 100 #(range (inc 10) 0 -1)))
-  
+(deftest test-servo-horizontal
+  (let [wait 25
+        step 1]
+    (servo-rotate 1 wait #(range 180 70 (* -1 step)))
+    (servo-rotate 1 wait #(range 70 130 step)))
+  (servo-stop 1)
+  (gpio-shutdown))
+
+(deftest test-servo-vertical
+  (let [wait 25
+        step 1]
+    (servo-rotate 2 wait #(range 180 70 (* -1 step)))
+    (servo-rotate 2 wait #(range 70 130 step)))
+  (servo-stop 2)
+  (gpio-shutdown))
+
+(deftest test-ultrasonic
+  (let [boundary 10.0
+        now (System/currentTimeMillis)]
+     (loop [distance (ultrasonic-check 1)]
+       (println "distance" distance)
+       (when (and distance (< distance boundary))
+         (println "boundary breached!"))
+       (when (< (- (System/currentTimeMillis) now) 5000)
+         (recur (ultrasonic-check 1)))))
+  (ultrasonic-stop 1)
+  (gpio-shutdown))
+       

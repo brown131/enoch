@@ -18,10 +18,13 @@
 (defn servo-init [id] (println "servo init" id))
 
 (defn servo-rotate [id wait range-fn]
-  (println "servo rotate" id wait (first (range-fn)) (last (range-fn))))
+  (println "servo rotate" id wait (first (range-fn)) (last (range-fn))
+           (- (second (range-fn)) (first (range-fn)))))
 
-(defn ultrasonic-init [id boundary] (println "ultrasonic init" id boundary))
+(defn servo-stop [id] (println "servo stop" id))
+
+(defn ultrasonic-init [id] (println "ultrasonic init" id))
 
 (defn ultrasonic-check [id] (println "ultrasonic check" id))
 
-(defn ultrasonic-trigger [id] (println "ultrasonic trigger" id))
+(defn ultrasonic-stop [id] (println "ultrasonic stop" id))

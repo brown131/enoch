@@ -33,7 +33,7 @@
 
 (defn arrow-init "Initialize an arrow with an id of 1-4."
   [id]
-  (when-not (get arrows id)
+  (when-not (get @arrows id)
     (swap! arrows assoc id (.provisionDigitalOutputPin gpio (get arrow-pins id) (str "Arrow" id) PinState/LOW))
     (println "arrow" id (get @arrows id))))
 
@@ -106,7 +106,6 @@
   (when-not (get @servos id)
     (let [pin (dec id)
           servo-provider (RPIServoBlasterProvider.)]
-      (println pin servo-provider)
       (swap! servos assoc id (.getServoDriver servo-provider (.get (.getDefinedServoPins servo-provider) pin))))))
 
 (defn servo-rotate
@@ -122,18 +121,45 @@
   "Stop the servo motor."
   [id]
   (.setServoPulseWidth (get @servos id) 0))
-  
+
+
 ;;; Ultrasonic
 
 
 (defn ultrasonic-init "Initialize a sensor by id."
-  [id boundary]
-  (reset! ultrasonic {:boundary boundary :last-read 0})
-  (println "trigger")
-  (.provisionDigitalOutputPin gpio (get-in ultrasonic-pins [1 :echo]) (str "Ultrasonic" id) PinState/LOW))
+  [id]
+  (when-not (get @ultrasonic id)
+    (swap! ultrasonic assoc id {:last-read 0
+                                :echo-pin (.provisionDigitalInputPin gpio (get-in ultrasonic-pins [id :echo])
+			                                             (str "UltrasonicEcho" id))
+  			        :trigger-pin (.provisionDigitalOutputPin gpio (get-in ultrasonic-pins [id :trigger])
+			                                                 (str "UltrasonicTrigger" id) PinState/LOW)})))
 
-(defn ultrasonic-check [id]
-  )
-
-(defn ultrasonic-trigger [id]
-  )
+(defn ultrasonic-check
+  "Check if the distance measured using ultrasonic sensor."
+  [id]
+  (ultrasonic-init id)
+    
+  (Thread/sleep 333)
+  (.high (get-in @ultrasonic [id :trigger-pin]))
+  (Thread/sleep 0 10000)
+  (.low (get-in @ultrasonic [id :trigger-pin]))
+  
+  (let [timed-out (atom false)
+        too-long #(reset! timed-out (> (- (System/currentTimeMillis) %) 200))
+        start (let [started (System/currentTimeMillis)]
+                (while (and (.isLow (get-in @ultrasonic [id :echo-pin]))
+		            (not (too-long started))))
+		(System/nanoTime))
+        end   (let [started (System/currentTimeMillis)]
+	        (while (and (not @timed-out)
+		            (.isHigh (get-in @ultrasonic [id :echo-pin]))
+		            (not (too-long started))))
+                (System/nanoTime))]
+      (if @timed-out
+        (println "timed out" @timed-out)
+	;; 0.0000174 * 38400 meters/sec / 2 [half the distance there and back] / 1E9 
+        (* (double (- end start)) 0.0000174))))
+ 
+(defn ultrasonic-stop [id]
+  (.low (get-in @ultrasonic [id :trigger-pin])))
