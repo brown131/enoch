@@ -1,15 +1,17 @@
-(ns enoch.motor-shield  "API for Maker-Sphere Motor-Shield v1 to be used on the Raspberry Pi."
+(ns enoch.motor-shield
+  "API for SB Components Meker-Sphere Motor-Shield v1 to be used on the Raspberry Pi."
   (:import [com.pi4j.wiringpi Gpio SoftPwm]
            [com.pi4j.io.gpio GpioFactory RaspiPin PinState Pin]
-	   [com.pi4j.component.servo ServoDriver ServoProvider]
+           [com.pi4j.component.servo ServoDriver ServoProvider]
            [com.pi4j.component.servo.impl RPIServoBlasterProvider]))
+
 
 (def gpio (GpioFactory/getInstance))
 
 (def motor-pins {1 {:enable RaspiPin/GPIO_00 :forward RaspiPin/GPIO_03 :reverse RaspiPin/GPIO_02}
-  	         2 {:enable RaspiPin/GPIO_06 :forward RaspiPin/GPIO_04 :reverse RaspiPin/GPIO_05}
+  	             2 {:enable RaspiPin/GPIO_06 :forward RaspiPin/GPIO_04 :reverse RaspiPin/GPIO_05}
                  3 {:enable RaspiPin/GPIO_12 :forward RaspiPin/GPIO_13 :reverse RaspiPin/GPIO_14}
-		 4 {:enable RaspiPin/GPIO_26 :forward RaspiPin/GPIO_10 :reverse RaspiPin/GPIO_11}})
+                 4 {:enable RaspiPin/GPIO_26 :forward RaspiPin/GPIO_10 :reverse RaspiPin/GPIO_11}})
 
 (def arrow-pins {1 RaspiPin/GPIO_23
                  2 RaspiPin/GPIO_24

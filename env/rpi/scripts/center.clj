@@ -1,15 +1,11 @@
 #!/bin/bash lein-exec
 
-;;;; Rebuild link counts in the Redis datastore.
-(ns enoch.center)
+(ns enoch.center
+  "Centers the horizontal and vertical servos so they face forward.")
 
 ;; Require packages.
 (require '[enoch.motor-shield :refer :all])   
-;'
 
-;; Used to adjust alignment
-(def halign 50)
-(def valign 50)
 (def step 1)
 (def wait 30)
 
