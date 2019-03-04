@@ -23,7 +23,9 @@
 (deftest test-servo-horizontal
   (let [wait 25
         step 1]
+    (println "rotate left")
     (servo-rotate 1 wait #(range 180 70 (* -1 step)))
+   (println "rotate right")
     (servo-rotate 1 wait #(range 70 130 step)))
   (servo-stop 1)
   (gpio-shutdown))
@@ -31,7 +33,9 @@
 (deftest test-servo-vertical
   (let [wait 25
         step 1]
+    (println "rotate back")
     (servo-rotate 2 wait #(range 180 70 (* -1 step)))
+    (println "rotate forward")
     (servo-rotate 2 wait #(range 70 130 step)))
   (servo-stop 2)
   (gpio-shutdown))

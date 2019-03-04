@@ -36,8 +36,7 @@
 (defn arrow-init "Initialize an arrow with an id of 1-4."
   [id]
   (when-not (get @arrows id)
-    (swap! arrows assoc id (.provisionDigitalOutputPin gpio (get arrow-pins id) (str "Arrow" id) PinState/LOW))
-    (println "arrow" id (get @arrows id))))
+    (swap! arrows assoc id (.provisionDigitalOutputPin gpio (get arrow-pins id) (str "Arrow" id) PinState/LOW))))
 
 (defn arrow-on "Lights up an arrow by id."
   [id]
