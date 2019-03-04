@@ -158,7 +158,8 @@
 		            (not (too-long started))))
                 (System/nanoTime))]
       (if @timed-out
-        (println "timed out" @timed-out)
+        (do (println "timed out" @timed-out)
+	    :timed-out)
 	;; 0.0000174 * 38400 meters/sec / 2 [half the distance there and back] / 1E9 
         (* (double (- end start)) 0.0000174))))
  

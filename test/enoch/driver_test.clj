@@ -2,16 +2,16 @@
   (:require [clojure.test :refer :all]
             [enoch.driver :refer :all]))
 
-#_(deftest test-change-arrow
+(deftest test-change-arrow
   (mapv (fn [a] (println "arrow" a)
                 (change-arrow a)
 		(swap! car-state assoc :mode a)
-                (Thread/sleep 1000)) (keys arrows))
+                (Thread/sleep 1000)) (keys direction-arrows))
   (println "arrow stop")
   (change-arrow :stopped)
   (Thread/sleep 500))
   
-#_(deftest test-drive-forward
+(deftest test-drive-forward
   (println "forward slow")
   (drive-forward 20)
   (Thread/sleep 2000)
@@ -22,7 +22,7 @@
 
   (drive-stop))
   
-#_(deftest test-drive-reverse
+(deftest test-drive-reverse
   (println "reverse slow")
   (drive-reverse 20)
   (Thread/sleep 2000)
@@ -33,7 +33,7 @@
 
   (drive-stop))
   
-#_(deftest test-drive-left
+(deftest test-drive-left
   (println "left slow")
   (drive-left 20)
   (Thread/sleep 2000)
@@ -44,7 +44,7 @@
 
   (drive-stop))
     
-#_(deftest test-drive-right
+(deftest test-drive-right
   (println "right slow")
   (drive-right 20)
   (Thread/sleep 2000)

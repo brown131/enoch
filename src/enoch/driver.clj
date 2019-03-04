@@ -1,28 +1,28 @@
 (ns enoch.driver "Literally drives the car."
-  (:require [enoch.motor-shield :as ms]))
+  (:require [enoch.motor-shield :refer :all]))
 
-(def car-state (atom {:mode :stopped :speed 0}))
+(def car-state (atom {:mode :stop :speed 0}))
 
-(def arrows {:forward 3 :right 4 :reverse 1 :left 2})
+(def direction-arrows {:forward 3 :right 4 :reverse 1 :left 2})
 
 (defn change-arrow [direction]
-  (let [arrow (direction arrows)]
-    (when-let [prev-arrow ((:mode @car-state) arrows)]
+  (let [arrow (direction direction-arrows)]
+    (when-let [prev-arrow ((:mode @car-state) direction-arrows)]
       (when-not (= prev-arrow arrow)
-        (ms/arrow-off prev-arrow)))
-    (when-not (= direction :stopped)
-      (ms/arrow-on arrow))))
+        (arrow-off prev-arrow)))
+    (when-not (= direction :stop)
+      (arrow-on arrow))))
 
 (defn drive-stop []
-  (when-not (= (:mode @car-state) :stopped)
-    (change-arrow :stopped)
+  (when-not (= (:mode @car-state) :stop)
+    (change-arrow :stop)
     (doseq [i [1 2 3 4]]
-      (ms/motor-stop i))
+      (motor-stop i))
     (Thread/sleep 250)
-    (swap! car-state assoc :mode :stopped :speed 0)))
+    (swap! car-state assoc :mode :stop :speed 0)))
 
 (defn change-state [direction speed]
-  (when-let [arrow (direction arrows)]
+  (when-let [arrow (direction direction-arrows)]
     (change-arrow direction)
 
     ;; Stop car first if moving in a new direction.
@@ -34,23 +34,23 @@
 (defn drive-forward [speed]
   (change-state :forward speed)
   (doseq [i [1 2 3 4]]
-    (ms/motor-forward i speed)))
+    (motor-forward i speed)))
      
 (defn drive-reverse [speed]
   (change-state :reverse speed)
   (doseq [i [1 2 3 4]]
-    (ms/motor-reverse i speed)))
+    (motor-reverse i speed)))
      
 (defn drive-left [speed]
   (change-state :left speed)
   (doseq [i [3 4]]
-     (ms/motor-forward i speed))
+     (motor-forward i speed))
   (doseq [i [1 2]]
-     (ms/motor-reverse i speed)))
+     (motor-reverse i speed)))
      
 (defn drive-right [speed]
   (change-state :right speed)
   (doseq [i [1 2]]
-    (ms/motor-forward i speed))
+    (motor-forward i speed))
   (doseq [i [3 4]]
-    (ms/motor-reverse i speed)))
+    (motor-reverse i speed)))

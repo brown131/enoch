@@ -45,7 +45,8 @@
         now (System/currentTimeMillis)]
      (loop [distance (ultrasonic-check 1)]
        (println "distance" distance)
-       (when (and distance (< distance boundary))
+       (when (and (not= distance :timed-out)
+                  (< distance boundary))
          (println "boundary breached!"))
        (when (< (- (System/currentTimeMillis) now) 5000)
          (recur (ultrasonic-check 1)))))
