@@ -6,7 +6,7 @@ While this software is specific to this robot, you may find the motor-shield.clj
 an example of how to implement motors, servos, and an ultrasonic sensor in Clojure using pi4j and 
 sensorblast.
 
-[enoch](https://github.com/brown131/enoch/blob/master/doc/enoch.jpg)
+[enoch](https://github.com/brown131/enoch/blob/master/doc/enoch.png)
 
 ## Parts
 * Rapsberry Pi 3 B
