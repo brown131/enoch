@@ -12,4 +12,4 @@
                    :dependencies [[org.bidib.com.pi4j/pi4j-core "1.2.M1"]
                                   [org.bidib.com.pi4j/pi4j-device "1.2.M1"]
                                   [org.bidib.com.pi4j/pi4j-gpio-extension "1.2.M1"]]}
-             :other {:source-paths ["src" "env/other"]}})
+             :mac {:source-paths ["src" "env/mac/src"]}})

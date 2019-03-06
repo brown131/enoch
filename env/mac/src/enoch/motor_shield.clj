@@ -15,6 +15,8 @@
 
 (defn motor-reverse [id] (println "motor reverse" id))
 
+(defn motor-stop [id] (println "motor stop" id))
+
 (defn servo-init [id] (println "servo init" id))
 
 (defn servo-rotate [id wait range-fn]

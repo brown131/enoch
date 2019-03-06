@@ -13,13 +13,15 @@
     (when-not (= direction :stop)
       (arrow-on arrow))))
 
-(defn drive-stop []
-  (when-not (= (:mode @car-state) :stop)
-    (change-arrow :stop)
-    (doseq [i [1 2 3 4]]
-      (motor-stop i))
-    (Thread/sleep 250)
-    (swap! car-state assoc :mode :stop :speed 0)))
+(defn drive-stop
+  ([_] (drive-stop))
+  ([]
+    (when-not (= (:mode @car-state) :stop)
+      (change-arrow :stop)
+      (doseq [i [1 2 3 4]]
+        (motor-stop i))
+      (Thread/sleep 250)
+      (swap! car-state assoc :mode :stop :speed 0))))
 
 (defn change-state [direction speed]
   (when-let [arrow (direction direction-arrows)]
