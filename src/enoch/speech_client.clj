@@ -1,6 +1,6 @@
 (ns enoch.speech-client
   (:require [clojure.string :as s]
-            [enoch.config :refer [config-properties private-properties]])
+            [enoch.config :refer [config-properties secret-properties]])
   (:import [java.util UUID]))
 
 (def language "en-US")
@@ -23,7 +23,7 @@
 ;  (let [url "https://api.cognitive.microsoft.com/sts/v1.0/issueToken"
 ;        headers {"Content-type" "application/x-www-form-urlencoded"
 ;                 "Content-Length" "0"
-;                 "Ocp-Apim-Subscription-Key" (:speech-recognition-api-key @private-properties)}]
+;                 "Ocp-Apim-Subscription-Key" (:speech-recognition-api-key @secret-properties)}]
 ;    (setv response (requests.post url :headers headers))
 ;
 ;  ;; DEBUG PRINT

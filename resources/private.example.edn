@@ -1,3 +1,0 @@
-;; This is an example private.edn file to show what keys are needed.
-{:speech-api-key "private key here"  ; Azure Speech Recognition API key
- }

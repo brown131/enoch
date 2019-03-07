@@ -10,4 +10,4 @@
 
 (def config-properties (read-config "application.edn"))
 
-(def private-properties (read-config "private.edn"))
+(def secret-properties (read-config "secret.edn"))

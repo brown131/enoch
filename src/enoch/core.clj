@@ -1,7 +1,7 @@
 (ns enoch.core
   (:require [clojure.core.async :as async]
             [enoch.center :refer [center-servos]]
-            [enoch.config :refer [config-properties private-properties]]
+            [enoch.config :refer [config-properties secret-properties]]
             [enoch.driver :refer :all]
             [enoch.motor-shield :refer :all])
   (:gen-class))
