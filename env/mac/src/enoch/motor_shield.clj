@@ -11,9 +11,9 @@
 
 (defn motor-init [id] (println "motor init" id))
 
-(defn motor-forward [id] (println "motor forward" id))
+(defn motor-forward [id speed] (println "motor forward" id speed))
 
-(defn motor-reverse [id] (println "motor reverse" id))
+(defn motor-reverse [id speed] (println "motor reverse" id speed))
 
 (defn motor-stop [id] (println "motor stop" id))
 
