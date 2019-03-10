@@ -1,8 +1,11 @@
 (ns enoch.speaker
   (:require [clojure.core.async :as async]
+            [taoensso.timbre :as log]
             [clojure.java.io :refer [file output-stream]])
   (:import [javax.sound.sampled AudioSystem AudioFormat DataLine DataLine$Info SourceDataLine
                                 AudioInputStream AudioFileFormat AudioFileFormat$Type]))
+
+(log/refer-timbre)
 
 (def audio-format (AudioFormat. 16000 16 1 true true))
 
@@ -19,4 +22,4 @@
             (.write source-data-line data 0 (count data))
             (recur (async/<! audio-chan))))
         (catch Exception e
-          (.printStackTrace e))))))
+          (log/error "Error playing speaker."))))))

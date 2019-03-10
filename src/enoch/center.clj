@@ -1,21 +1,27 @@
 (ns enoch.center
   "Centers the horizontal and vertical servos so they face forward."
-  (:require [enoch.motor-shield :refer :all]))
+  (:require [enoch.motor-shield :refer :all]
+            [taoensso.timbre :as log]))
+
+(log/refer-timbre)
 
 (def step 1)
 (def wait 30)
 
 (defn center-servos []
-  (println "Centering horizontal and vertical servos.")
+  (try
+    (info "Centering horizontal and vertical servos.")
   
-  ;; Horizontal
-  (servo-rotate 1 wait #(range 180 70 (* -1 step)))
-  (servo-rotate 1 wait #(range 70 130 step))
-  (servo-stop 1) 
+    ;; Horizontal
+    (servo-rotate 1 wait #(range 180 70 (* -1 step)))
+    (servo-rotate 1 wait #(range 70 130 step))
+    (servo-stop 1)
 
-  ;; Vertical
-  (servo-rotate 2 wait #(range 180 70 (* -1 step)))
-  (servo-rotate 2 wait #(range 70 130 step))
-  (servo-stop 2)
+    ;; Vertical
+    (servo-rotate 2 wait #(range 180 70 (* -1 step)))
+    (servo-rotate 2 wait #(range 70 130 step))
+    (servo-stop 2)
 
-  (gpio-shutdown))
+    (gpio-shutdown)
+    (catch Exception e
+      (log/error e "Error centering servos"))))

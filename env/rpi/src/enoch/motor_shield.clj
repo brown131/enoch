@@ -1,10 +1,12 @@
 (ns enoch.motor-shield
   "API for SB Components Meker-Sphere Motor-Shield v1 to be used on the Raspberry Pi."
-  (:import [com.pi4j.wiringpi Gpio SoftPwm]
+  (:import [taoensso.timbre :as log]
+           [com.pi4j.wiringpi Gpio SoftPwm]
            [com.pi4j.io.gpio GpioFactory RaspiPin PinState Pin]
            [com.pi4j.component.servo ServoDriver ServoProvider]
            [com.pi4j.component.servo.impl RPIServoBlasterProvider]))
 
+(log/refer-timbre)
 
 (def gpio (GpioFactory/getInstance))
 
@@ -62,7 +64,7 @@
 
 (defn motor-forward "Start the motor turning in its configured \"forward\" direction."
   [id speed]
-  (println "motor forward" id speed)
+  (log/info "motor forward" id speed)
   (if @motor-test
     (arrow-on id)
     (do
@@ -75,7 +77,7 @@
 
 (defn motor-reverse "Start the motor turning in its configured \"reverse\" direction."
   [id speed]
-  (println "motor reverse" id speed)
+  (log/info "motor reverse" id speed)
   (if @motor-test
     (arrow-off id)
     (do
@@ -88,7 +90,7 @@
 
 (defn motor-stop "Stop power to the motor."
   [id]
-  (println "motor stop" id)
+  (log/info "motor stop" id)
   (if @motor-test
     (arrow-off id)
     (do
@@ -158,7 +160,7 @@
 		            (not (too-long started))))
                 (System/nanoTime))]
       (if @timed-out
-        (do (println "timed out" @timed-out)
+        (do (log/info "timed out" @timed-out)
 	    :timed-out)
 	;; 0.0000174 * 38400 meters/sec / 2 [half the distance there and back] / 1E9 
         (* (double (- end start)) 0.0000174))))

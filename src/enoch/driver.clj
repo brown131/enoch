@@ -1,6 +1,9 @@
 (ns enoch.driver "Literally drives the car."
   (:require [clojure.core.async :as async]
+            [taoensso.timbre :as log]
             [enoch.motor-shield :refer :all]))
+
+(log/refer-timbre)
 
 (def car-state (atom {:mode :stop :speed 0}))
 

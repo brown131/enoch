@@ -1,32 +1,35 @@
 (ns enoch.motor-shield
-  "Dummy API for Maker-Sphere Motor-Shield v1 to be used on platforms other than the Raspberry Pi.")
+  "Dummy API for Maker-Sphere Motor-Shield v1 to be used on platforms other than the Raspberry Pi."
+  (:require [taoensso.timbre :as log]))
 
-(defn gpio-shutdown [] (println "gpio shutdown"))
+(log/refer-timbre)
 
-(defn arrow-init [id] (println "arrow init" id))
+(defn gpio-shutdown [] (log/info "gpio shutdown"))
 
-(defn arrow-on [id] (println "arrow on" id))
+(defn arrow-init [id] (log/info "arrow init" id))
 
-(defn arrow-off [id] (println "arrow off" id))
+(defn arrow-on [id] (log/info "arrow on" id))
 
-(defn motor-init [id] (println "motor init" id))
+(defn arrow-off [id] (log/info "arrow off" id))
 
-(defn motor-forward [id speed] (println "motor forward" id speed))
+(defn motor-init [id] (log/info "motor init" id))
 
-(defn motor-reverse [id speed] (println "motor reverse" id speed))
+(defn motor-forward [id speed] (log/info "motor forward" id speed))
 
-(defn motor-stop [id] (println "motor stop" id))
+(defn motor-reverse [id speed] (log/info "motor reverse" id speed))
 
-(defn servo-init [id] (println "servo init" id))
+(defn motor-stop [id] (log/info "motor stop" id))
+
+(defn servo-init [id] (log/info "servo init" id))
 
 (defn servo-rotate [id wait range-fn]
-  (println "servo rotate" id wait (first (range-fn)) (last (range-fn))
+  (log/info "servo rotate" id wait (first (range-fn)) (last (range-fn))
            (- (second (range-fn)) (first (range-fn)))))
 
-(defn servo-stop [id] (println "servo stop" id))
+(defn servo-stop [id] (log/info "servo stop" id))
 
-(defn ultrasonic-init [id] (println "ultrasonic init" id))
+(defn ultrasonic-init [id] (log/info "ultrasonic init" id))
 
-(defn ultrasonic-check [id] (println "ultrasonic check" id))
+(defn ultrasonic-check [id] (log/info "ultrasonic check" id))
 
-(defn ultrasonic-stop [id] (println "ultrasonic stop" id))
+(defn ultrasonic-stop [id] (log/info "ultrasonic stop" id))

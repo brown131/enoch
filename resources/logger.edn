@@ -1,0 +1,5 @@
+{:level :debug
+ :appenders {:println (taoensso.timbre.appenders.core/println-appender
+                        {:stream :auto})
+             :rotor (taoensso.timbre.appenders.3rd-party.rotor/rotor-appender
+                      {:path "log/enoch.log" :backlog 10})}}

@@ -1,7 +1,10 @@
 (ns enoch.speech-client
   (:require [clojure.string :as s]
+            [taoensso.timbre :as log]
             [enoch.config :refer [config-properties secret-properties]])
   (:import [java.util UUID]))
+
+(log/refer-timbre)
 
 (def language "en-US")
 (def response-format "simple")
