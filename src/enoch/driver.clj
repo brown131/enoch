@@ -1,5 +1,6 @@
 (ns enoch.driver "Literally drives the car."
-  (:require [enoch.motor-shield :refer :all]))
+  (:require [clojure.core.async :as async]
+            [enoch.motor-shield :refer :all]))
 
 (def car-state (atom {:mode :stop :speed 0}))
 
@@ -56,3 +57,20 @@
     (motor-forward i speed))
   (doseq [i [3 4]]
     (motor-reverse i speed)))
+
+(def drive-commands {:forward drive-forward
+                     :reverse drive-reverse
+                     :left    drive-left
+                     :right   drive-right
+                     :stop    drive-stop})
+
+(defn do-driver "Thread to process drive commands."
+  [drive-chan shutdown-chan]
+  (async/thread
+    (loop [[direction speed] (async/<!! drive-chan)]
+      (when direction
+        ((get drive-commands direction) speed)
+        (if (= direction :stop)
+          ;; TODO Remove when we have a :shutdown voice command.
+          (async/put! shutdown-chan true)
+          (recur (async/<!! drive-chan)))))))

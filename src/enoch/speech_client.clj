@@ -85,3 +85,7 @@
 ;        (await (asyncio.wait [sending-task receiving-task] :return_when asyncio.ALL_COMPLETED))
 ;
 ;        (return self.phrase))
+
+(defn go-connect-speech-api [] )
+
+(defn go-connect-speech-api-response [] )
