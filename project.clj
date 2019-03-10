@@ -5,8 +5,11 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.10.0"]
                  [org.clojure/core.async "0.4.490"]
-                 [stylefruits/gniazdo "1.1.1"]
-                 [com.taoensso/timbre "4.10.0"]]
+                 [org.clojure/data.json "0.2.6"]
+                 [clj-http "3.9.1"]
+                 [clj-time "0.15.0"]
+                 [com.taoensso/timbre "4.10.0"]
+                 [stylefruits/gniazdo "1.1.1"]]
   :main enoch.core
   :aot :all
   :resource-paths ["resources"]

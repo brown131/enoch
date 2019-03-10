@@ -75,5 +75,5 @@
         ((get drive-commands direction) speed)
         (if (= direction :stop)
           ;; TODO Remove when we have a :shutdown voice command.
-          (async/put! shutdown-chan true)
+          (async/put! shutdown-chan :shutdown)
           (recur (async/<!! drive-chan)))))))

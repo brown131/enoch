@@ -7,7 +7,8 @@
             [enoch.microphone :refer [go-microphone]]
             [enoch.motor-shield :refer [gpio-shutdown ultrasonic-stop]]
             [enoch.sensor :refer [do-ultrasonic-sensor]]
-            [enoch.speaker :refer [go-speaker]])
+            [enoch.speaker :refer [go-speaker]]
+            [enoch.speech-client :refer [do-obtain-auth-token connect-speech-api disconnect-speech-api]])
   (:gen-class))
 
 (log/refer-timbre)
@@ -17,12 +18,14 @@
     (uncaughtException [_ thread e]
       (log/error e "Uncaught exception on" (.getName thread)))))
 
-(defn shutdown [audio-chan drive-chan shutdown-chan]
+(defn shutdown "Close channels, stop tasks, and free resources."
+  [audio-chan drive-chan shutdown-chan]
   (try
-    (ultrasonic-stop 1)
     (async/close! audio-chan)
     (async/close! drive-chan)
     (async/close! shutdown-chan)
+    (disconnect-speech-api)
+    (ultrasonic-stop 1)
     (gpio-shutdown)
     (catch Exception e
       (log/error e "Error shutting down"))))
@@ -36,11 +39,17 @@
           shutdown-chan (async/chan 10)]
       (try
         (log/info "Staring enoch")
-        (do-driver drive-chan shutdown-chan)
-        (do-ultrasonic-sensor (:ultrasonic-sensor-boundary @config-properties) drive-chan)
+
+        ;; Start go-blocks.
         (go-microphone audio-chan)
         (go-speaker audio-chan)
 
+        ;; Start threads.
+        (do-obtain-auth-token shutdown-chan)
+        (do-driver drive-chan shutdown-chan)
+        (do-ultrasonic-sensor (:ultrasonic-sensor-boundary @config-properties) drive-chan)
+
+        (connect-speech-api)
         (async/put! drive-chan [:forward 20])
         (async/<!! shutdown-chan)
         (catch Exception e
