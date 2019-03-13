@@ -50,13 +50,13 @@
         (when (not= ch shutdown-chan)
           (recur))))))
 
-(defn send-speech-config-msg []
-  "Assemble the payload for the speech.config message."
+(defn send-speech-config-msg
+  []
   (let [os-name (:out (sh "uname" "-sv"))
         payload {"context" {"system" {"version" "5.4"}
-                            "os" {"platform" (first (s/split os-name))
+                            "os" {"platform" (first (s/split os-name #" "))
                                   "name" os-name
-                                  "version" (s/join #" " (rest (s/split os-name)))}
+                                  "version" (s/join " " (rest (s/split os-name #" ")))}
                             "device" {"manufacturer" "brown131@yahoo.com"
                                       "model" "Enoch"
                                       "version" "0.1.0"}}}
@@ -68,6 +68,20 @@
                  "\r\n" (json/write-str payload))]
     (log/debug ">>" msg)
     (ws/send-msg @websocket msg)))
+
+(defn process-connect [connection-id start-time response]
+  (log/info "Speech API client connected.")
+
+  ;; Record the Connection metric telemetry data.
+  (swap! metrics conj {"Name" "Connection"
+                       "Id" connection-id
+                       "Start" start-time
+                       "End" (generate-timestamp)})
+
+  (send-speech-config-msg))
+
+(defn process-response [response]
+  )
 
 (defn connect-speech-api
   "Determine the endpoint based on the selected recognition mode."
@@ -82,19 +96,14 @@
           url (format "%s?language=%s&format=%s" endpoint language response-format)
           headers {"Authorization" (str "Bearer " @auth-token)
                    "X-ConnectionId" connection-id}
-          start (generate-timestamp)]
+          start-time (generate-timestamp)]
       (try
-        ;; Request a WebSocket connection to the speech API.
-        (reset! websocket (ws/connect url :header headers
-                                      :on-connect (fn [s]
-                                                    ;; Record the Connection metric telemetry data.
-                                                    (swap! metrics conj {"Name" "Connection"
-                                                                         "Id" connection-id
-                                                                         "Start" start
-                                                                         "End" (generate-timestamp)})
-
-                                                    ;; Send the speech.config message.
-                                                    (send-speech-config-msg))))
+        ;; Request websocket connection to the STT API.
+        (println url)
+        (reset! websocket (ws/connect url :headers headers
+                                      :on-error #(log/error "Error connectiing websocket" %)
+                                      :on-connect (partial process-connect connection-id start-time)
+                                      :on-receive process-response))
         (catch Exception e
           (log/error e "Handshake error"))))
     (log/error "Invalid recognition mode.")))
@@ -102,16 +111,37 @@
 (defn disconnect-speech-api []
   (ws/close @websocket))
 
-;;; Perform the sending and receiving via the WebSocket concurrently.
-;(defn/a speech-to-text [self audio-file-path]
-;        (setv sending-task (asyncio.ensure_future (self.send-audio-msg audio-file-path)))
-;        (setv receiving-task (asyncio.ensure_future (self.process-response)))
-;
-;        ;; Wait for both the tasks to complete.
-;        (await (asyncio.wait [sending-task receiving-task] :return_when asyncio.ALL_COMPLETED))
-;
-;        (return self.phrase))
+#_(defn send-audio-msg [audio-file-path]
+  (with [f-audio (open audio-file-path "rb")]
+        (setv num-chunks 0)
+        (while True
+          ;; Read the audio file in small consecutive chunks.
+          (setv audio-chunk (.read f-audio self.chunk-size))
+          (unless audio-chunk
+                  (break))
+          (setv num-chunks (inc num-chunks))
 
-(defn go-connect-speech-api [] )
+          ;; Assemble the header for the binary audio message.
+          (setv msg (ctr "Path: audio\r\n"
+                         "Content-Type: audio/x-wav\r\n"
+                         "X-RequestId: " (bytearray self.request-id "ascii") b"\r\n"
+                         "X-Timestamp: " (bytearray (utils.generate-timestamp) "ascii") b"\r\n"))
+          ;; Prepend the length of the header in 2-byte big-endian format.
+          (setv msg (+ (.to-bytes (len msg) 2 :byteorder "big") msg))
+          ;; Append the body of the message.
+          (setv msg (+ msg b"\r\n" audio-chunk))
 
-(defn go-connect-speech-api-response [] )
+          ;; DEBUG PRINT
+          ;; (print ">>" msg)
+          ;; (.flush sys.stdout)
+
+          (try
+            (await (.send self.ws msg))
+            ;; DEBUG CONCURRENCY
+            ;; (await (asyncio.sleep 0.1))
+            (except [e websockets.exceptions.ConnectionClosed]
+                    (print (.format "Connection closed: {0}" e)))))))
+
+(defn go-speech-to-text "Read audio from the channel and send it to the STT service."
+  [audio-chan]
+  )

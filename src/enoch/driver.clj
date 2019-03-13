@@ -67,7 +67,7 @@
                      :right   drive-right
                      :stop    drive-stop})
 
-(defn do-driver "Thread to process drive commands."
+(defn do-driver "Process drive commands."
   [drive-chan shutdown-chan]
   (async/thread
     (loop [[direction speed] (async/<!! drive-chan)]

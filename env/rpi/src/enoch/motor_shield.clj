@@ -1,7 +1,7 @@
 (ns enoch.motor-shield
   "API for SB Components Meker-Sphere Motor-Shield v1 to be used on the Raspberry Pi."
-  (:import [taoensso.timbre :as log]
-           [com.pi4j.wiringpi Gpio SoftPwm]
+  (:require [taoensso.timbre :as log])
+  (:import [com.pi4j.wiringpi Gpio SoftPwm]
            [com.pi4j.io.gpio GpioFactory RaspiPin PinState Pin]
            [com.pi4j.component.servo ServoDriver ServoProvider]
            [com.pi4j.component.servo.impl RPIServoBlasterProvider]))
