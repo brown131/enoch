@@ -23,6 +23,23 @@
     ;(log/debug avgpp)
     (> avgpp (:noise-threshold @config-properties))))
 
+(defn create-wave-buffer [output-buffer-stream audio-chan]
+  (let [input-buffer-stream (ByteArrayInputStream. (.toByteArray output-buffer-stream))
+        wave-audio-stream (AudioInputStream. input-buffer-stream audio-format
+                                             (/ (.size output-buffer-stream)
+                                                (.getFrameSize audio-format)))
+        wave-output-stream (ByteArrayOutputStream.)]
+    ;; Create a wave file from the buffers sounds.
+    (AudioSystem/write wave-audio-stream AudioFileFormat$Type/WAVE wave-output-stream)
+    (async/put! audio-chan (.toByteArray wave-output-stream))
+
+    ;; Clean-up.
+    ;(.flush wave-output-stream)
+    ;(.flush output-buffer-stream)
+    (.close output-buffer-stream)
+    (.close wave-audio-stream)
+    (.close wave-output-stream)))
+
 (defn go-microphone "Read audio from the microphone an put in onto the audio channel."
   [audio-chan]
   (let [target-data-line-info (DataLine$Info. TargetDataLine audio-format)
@@ -40,19 +57,9 @@
             (let [has-sound? (filter-sound buffer buffer-len)
                   end-of-clip? (and (pos? (.size output-buffer-stream))
                                     (>= empty-frames (:max-empty-frames @config-properties)))]
-              (log/debug "hs?" has-sound? "eoc?" end-of-clip? "ef" empty-frames)
+              ;(log/debug "hs?" has-sound? "eoc?" end-of-clip? "ef" empty-frames)
               (if end-of-clip?
-                (let [input-buffer-stream (ByteArrayInputStream. (.toByteArray output-buffer-stream))
-                      wave-audio-stream (AudioInputStream. input-buffer-stream audio-format
-                                                           (/ (.size output-buffer-stream)
-                                                              (.getFrameSize audio-format)))
-                      wave-file-name (str "/tmp/" (System/currentTimeMillis) ".wav")]
-                  ;; Create a wave file from the buffers sounds.
-                  (AudioSystem/write wave-audio-stream AudioFileFormat$Type/WAVE (io/file wave-file-name))
-                  (.flush output-buffer-stream)
-                  (.close output-buffer-stream)
-                  (.close wave-audio-stream)
-                  (async/put! audio-chan wave-file-name))
+                (create-wave-buffer output-buffer-stream audio-chan)
                 (when has-sound?
                   (.write output-buffer-stream buffer 0 buffer-len)))
                 (recur (.read target-data-line buffer 0 buffer-len)

@@ -8,7 +8,7 @@
             [enoch.motor-shield :refer [gpio-shutdown ultrasonic-stop]]
             [enoch.sensor :refer [do-ultrasonic-sensor]]
             [enoch.speaker :refer [go-speaker]]
-            [enoch.speech-client :refer [do-obtain-auth-token connect-speech-api disconnect-speech-api]])
+            [enoch.speech-client :refer :all])
   (:gen-class))
 
 (log/refer-timbre)
@@ -42,16 +42,18 @@
 
         ;; Start go-blocks.
         (go-microphone audio-chan)
-        (go-speaker audio-chan)
+        ;(go-speaker audio-chan)
 
         ;; Start threads.
         (do-obtain-auth-token shutdown-chan)
         (do-driver drive-chan shutdown-chan)
         (do-ultrasonic-sensor (:ultrasonic-sensor-boundary @config-properties) drive-chan)
+        (do-send-audio-msg audio-chan shutdown-chan)
 
         (connect-speech-api)
         (async/put! drive-chan [:forward 20])
-        (async/<!! shutdown-chan)
+        ;(async/<!! shutdown-chan)
+        (read-line)
         (catch Exception e
           (log/error e "Error running enoch"))
         (finally

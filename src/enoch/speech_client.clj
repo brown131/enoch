@@ -19,7 +19,8 @@
 
 (def auth-token (atom nil))
 (def websocket (atom nil))
-(def metrics (atom []))
+(def metrics (atom nil))
+(def received-messages (atom nil))
 
 (defn generate-id []
   (s/replace (str (UUID/randomUUID)) #"-" ""))
@@ -80,8 +81,59 @@
 
   (send-speech-config-msg))
 
+(defn record-telemetry [request-id response-path]
+  (swap! received-messages assoc-in [request-id response-path]
+         (if-let [msg (get @received-messages response-path)]
+           (conj (if (seq? msg) msg [msg]) (generate-timestamp))
+           (generate-timestamp))))
+
+(defn send-telemetry-msg
+  [request-id]
+  (let [payload (conj {"ReceivedMessages" (get @received-messages request-id)}
+                      (when @metrics ["Metrics" @metrics]))
+        ;; Assemble the header for the speech.config message.
+        msg (str "Path: telemetry\r\n"
+                 "Content-Type: application/json; charset=utf-8\r\n"
+                 "X-RequestId:" request-id "\r\n"
+                 "X-Timestamp:" (generate-timestamp) "\r\n"
+                 ;; Append the body of the message.
+                 "\r\n" (json/write-str payload))]
+    (log/debug ">>" msg)
+    (ws/send-msg @websocket msg)
+    (reset! metrics nil)))
+
+(defn parse-response [response]
+  (let [lines (s/split response #"\r\n")]
+    (loop [lines lines
+           headers {}]
+      (if (empty? (first lines))
+        [headers (json/read-str (s/join (rest lines)))]
+        (recur (rest lines) (conj headers (s/split (first lines) #":")))))))
+
 (defn process-response [response]
-  )
+  (log/debug "<<" response)
+  (let [[headers body] (parse-response response)]
+    (let [request-id (get headers "X-RequestId")
+          response-path (get headers "Path")]
+      (record-telemetry request-id response-path)
+      (case response-path
+        "turn.start" (when (get body "Error") (log/error "Error response" response))
+        "speech.startDetected" (when (get body "Error") (log/error "Error response" response))
+        "speech.hypthosis" (if (get body "Error")
+                             (log/error "Error response" response)
+                             (log/info "Current hypthosis" (get body "Text")))
+        "speech.phrase" (case (get body "RecognitionStatus")
+                          "Success" (case response-format
+                                      "simple" (log/info "Simple" (get body "DisplayText"))
+                                      "detailed" (log/info "Detailed" (get (first (get body "NBest")) "Display"))
+                                      (log/info "Unexpected response format."))
+                          "Error" (log/error "Error response" response))
+        "speech.endDetected" (when (get body "Error") (log/error "Error response" response))
+        "turn.end" (if (get body "Error")
+                     (log/error "Error response" response)
+                     (swap! received-messages dissoc request-id))
+        (log/error "Unexpected response type (Path header)." response-path))
+      (send-telemetry-msg request-id))))
 
 (defn connect-speech-api
   "Determine the endpoint based on the selected recognition mode."
@@ -99,49 +151,41 @@
           start-time (generate-timestamp)]
       (try
         ;; Request websocket connection to the STT API.
-        (println url)
         (reset! websocket (ws/connect url :headers headers
-                                      :on-error #(log/error "Error connectiing websocket" %)
+                                      :on-close #(log/info "Web socket connection closed" %1 %2)
                                       :on-connect (partial process-connect connection-id start-time)
-                                      :on-receive process-response))
+                                      :on-error #(log/error "Web socket error" %)
+                                      :on-receive process-response
+                                      :on-binary (constantly (log/error "Unexpected binary response."))))
         (catch Exception e
           (log/error e "Handshake error"))))
     (log/error "Invalid recognition mode.")))
 
 (defn disconnect-speech-api []
-  (ws/close @websocket))
+  (ws/close @websocket)
+  (reset! metrics nil))
 
-#_(defn send-audio-msg [audio-file-path]
-  (with [f-audio (open audio-file-path "rb")]
-        (setv num-chunks 0)
-        (while True
-          ;; Read the audio file in small consecutive chunks.
-          (setv audio-chunk (.read f-audio self.chunk-size))
-          (unless audio-chunk
-                  (break))
-          (setv num-chunks (inc num-chunks))
-
-          ;; Assemble the header for the binary audio message.
-          (setv msg (ctr "Path: audio\r\n"
-                         "Content-Type: audio/x-wav\r\n"
-                         "X-RequestId: " (bytearray self.request-id "ascii") b"\r\n"
-                         "X-Timestamp: " (bytearray (utils.generate-timestamp) "ascii") b"\r\n"))
-          ;; Prepend the length of the header in 2-byte big-endian format.
-          (setv msg (+ (.to-bytes (len msg) 2 :byteorder "big") msg))
-          ;; Append the body of the message.
-          (setv msg (+ msg b"\r\n" audio-chunk))
-
-          ;; DEBUG PRINT
-          ;; (print ">>" msg)
-          ;; (.flush sys.stdout)
-
+(defn do-send-audio-msg "Send audio from the audio channel."
+  [audio-chan shutdown-chan]
+  (async/thread
+    (loop []
+      ;; Wait for either audio or a shutdown.
+      (let [[buffer ch] (async/alts!! [audio-chan shutdown-chan])]
+        (log/debug "buffer" (count buffer) "ch" ch)
+        (when (= ch shutdown-chan)
+          (log/info "do-send-audio-msg shutdown"))
+        (when (not= ch shutdown-chan)
           (try
-            (await (.send self.ws msg))
-            ;; DEBUG CONCURRENCY
-            ;; (await (asyncio.sleep 0.1))
-            (except [e websockets.exceptions.ConnectionClosed]
-                    (print (.format "Connection closed: {0}" e)))))))
-
-(defn go-speech-to-text "Read audio from the channel and send it to the STT service."
-  [audio-chan]
-  )
+            (let [request-id (generate-id)
+                  headers (map byte (str "Path: audio\r\n"
+                                         "Content-Type: audio/x-wav\r\n"
+                                         "X-RequestId: " request-id "\r\n"
+                                         "X-Timestamp: " (generate-timestamp) "\r\n"))
+                  headers-len (short (count headers))
+                  msg (bytes (byte-array (concat [(quot headers-len 256) (mod headers-len 256)]
+                                                 headers buffer)))]
+              (log/debug ">>" headers (count buffer))
+              (ws/send-msg @websocket msg))
+            (catch Exception e
+              (log/error e)))
+          (recur))))))
