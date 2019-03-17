@@ -19,9 +19,11 @@
       (log/error e "Uncaught exception on" (.getName thread)))))
 
 (defn shutdown "Close channels, stop tasks, and free resources."
-  [audio-chan drive-chan shutdown-chan]
+  [audio-chan message-chan drive-chan shutdown-chan]
+  (log/info "Shutting down.")
   (try
     (async/close! audio-chan)
+    (async/close! message-chan)
     (async/close! drive-chan)
     (async/close! shutdown-chan)
     (disconnect-speech-api)
@@ -35,6 +37,7 @@
   (if (= (first args) "--center")
     (center-servos)
     (let [audio-chan (async/chan 100)
+          message-chan (async/chan 10)
           drive-chan (async/chan 10)
           shutdown-chan (async/chan 10)]
       (try
@@ -42,6 +45,7 @@
 
         ;; Start go-blocks.
         (go-microphone audio-chan)
+        (go-process-response message-chan)
         ;(go-speaker audio-chan)
 
         ;; Start threads.
@@ -50,11 +54,11 @@
         (do-ultrasonic-sensor (:ultrasonic-sensor-boundary @config-properties) drive-chan)
         (do-send-audio-msg audio-chan shutdown-chan)
 
-        (connect-speech-api)
+        (connect-speech-api message-chan)
         (async/put! drive-chan [:forward 20])
         ;(async/<!! shutdown-chan)
         (read-line)
         (catch Exception e
           (log/error e "Error running enoch"))
         (finally
-          (shutdown audio-chan drive-chan shutdown-chan))))))
+          (shutdown audio-chan message-chan drive-chan shutdown-chan))))))

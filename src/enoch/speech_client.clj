@@ -110,34 +110,36 @@
         [headers (json/read-str (s/join (rest lines)))]
         (recur (rest lines) (conj headers (s/split (first lines) #":")))))))
 
-(defn process-response [response]
-  (log/debug "<<" response)
-  (let [[headers body] (parse-response response)]
-    (let [request-id (get headers "X-RequestId")
-          response-path (get headers "Path")]
-      (record-telemetry request-id response-path)
-      (case response-path
-        "turn.start" (when (get body "Error") (log/error "Error response" response))
-        "speech.startDetected" (when (get body "Error") (log/error "Error response" response))
-        "speech.hypthosis" (if (get body "Error")
-                             (log/error "Error response" response)
-                             (log/info "Current hypthosis" (get body "Text")))
-        "speech.phrase" (case (get body "RecognitionStatus")
-                          "Success" (case response-format
-                                      "simple" (log/info "Simple" (get body "DisplayText"))
-                                      "detailed" (log/info "Detailed" (get (first (get body "NBest")) "Display"))
-                                      (log/info "Unexpected response format."))
-                          "Error" (log/error "Error response" response))
-        "speech.endDetected" (when (get body "Error") (log/error "Error response" response))
-        "turn.end" (if (get body "Error")
-                     (log/error "Error response" response)
-                     (swap! received-messages dissoc request-id))
-        (log/error "Unexpected response type (Path header)." response-path))
-      (send-telemetry-msg request-id))))
+(defn go-process-response [message-chan]
+  (async/go
+    (loop [response (async/<! message-chan)]
+      (log/debug "<<" response)
+      (let [[headers body] (parse-response response)
+            request-id (get headers "X-RequestId")
+            response-path (get headers "Path")]
+        (record-telemetry request-id response-path)
+        (if (get body "Error")
+          (log/error "Error response" response)
+          (case response-path
+            "turn.start" nil
+            "speech.startDetected" nil
+            "speech.hypthosis" (log/info "Current hypthosis" (get body "Text"))
+            "speech.phrase" (case (get body "RecognitionStatus")
+                              "Success" (case response-format
+                                          "simple" (log/info "Simple" (get body "DisplayText"))
+                                          "detailed" (log/info "Detailed" (get (first (get body "NBest")) "Display"))
+                                          (log/info "Unexpected response format."))
+                              "Error" (log/error "Error response" response))
+            "speech.endDetected" nil
+            "turn.end" (do
+                         (swap! received-messages dissoc request-id)
+                         (send-telemetry-msg request-id))
+            (log/error "Unexpected response type (Path header)." response-path))))
+      (recur (async/<! message-chan)))))
 
 (defn connect-speech-api
   "Determine the endpoint based on the selected recognition mode."
-  []
+  [message-chan]
   ;; Wait for an auth token.
   (while (nil? @auth-token)
     (Thread/sleep 200))
@@ -155,7 +157,7 @@
                                       :on-close #(log/info "Web socket connection closed" %1 %2)
                                       :on-connect (partial process-connect connection-id start-time)
                                       :on-error #(log/error "Web socket error" %)
-                                      :on-receive process-response
+                                      :on-receive #(async/put! message-chan %)
                                       :on-binary (constantly (log/error "Unexpected binary response."))))
         (catch Exception e
           (log/error e "Handshake error"))))
@@ -171,7 +173,7 @@
     (loop []
       ;; Wait for either audio or a shutdown.
       (let [[buffer ch] (async/alts!! [audio-chan shutdown-chan])]
-        (log/debug "buffer" (count buffer) "ch" ch)
+        (log/debug "buffer" (count buffer))
         (when (= ch shutdown-chan)
           (log/info "do-send-audio-msg shutdown"))
         (when (not= ch shutdown-chan)

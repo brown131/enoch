@@ -34,8 +34,8 @@
     (async/put! audio-chan (.toByteArray wave-output-stream))
 
     ;; Clean-up.
-    ;(.flush wave-output-stream)
-    ;(.flush output-buffer-stream)
+    (.flush wave-output-stream)
+    (.flush output-buffer-stream)
     (.close output-buffer-stream)
     (.close wave-audio-stream)
     (.close wave-output-stream)))
