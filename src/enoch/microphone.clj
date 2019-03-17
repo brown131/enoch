@@ -23,7 +23,7 @@
     ;(log/debug avgpp)
     (> avgpp (:noise-threshold @config-properties))))
 
-(defn create-wave-buffer [output-buffer-stream audio-chan]
+(defn create-wave-buffer [output-buffer-stream microphone-chan]
   (let [input-buffer-stream (ByteArrayInputStream. (.toByteArray output-buffer-stream))
         wave-audio-stream (AudioInputStream. input-buffer-stream audio-format
                                              (/ (.size output-buffer-stream)
@@ -31,7 +31,7 @@
         wave-output-stream (ByteArrayOutputStream.)]
     ;; Create a wave file from the buffers sounds.
     (AudioSystem/write wave-audio-stream AudioFileFormat$Type/WAVE wave-output-stream)
-    (async/put! audio-chan (.toByteArray wave-output-stream))
+    (async/put! microphone-chan (.toByteArray wave-output-stream))
 
     ;; Clean-up.
     (.flush wave-output-stream)
@@ -41,7 +41,7 @@
     (.close wave-output-stream)))
 
 (defn go-microphone "Read audio from the microphone an put in onto the audio channel."
-  [audio-chan]
+  [microhone-chan]
   (let [target-data-line-info (DataLine$Info. TargetDataLine audio-format)
         target-data-line (AudioSystem/getLine target-data-line-info)
         buffer-len (.getBufferSize target-data-line)
@@ -59,7 +59,7 @@
                                     (>= empty-frames (:max-empty-frames @config-properties)))]
               ;(log/debug "hs?" has-sound? "eoc?" end-of-clip? "ef" empty-frames)
               (if end-of-clip?
-                (create-wave-buffer output-buffer-stream audio-chan)
+                (create-wave-buffer output-buffer-stream microhone-chan)
                 (when has-sound?
                   (.write output-buffer-stream buffer 0 buffer-len)))
                 (recur (.read target-data-line buffer 0 buffer-len)

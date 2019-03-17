@@ -8,8 +8,7 @@
                  [org.clojure/data.json "0.2.6"]
                  [clj-http "3.9.1"]
                  [clj-time "0.15.0"]
-                 [com.taoensso/timbre "4.10.0"]
-                 [stylefruits/gniazdo "1.1.1"]]
+                 [com.taoensso/timbre "4.10.0"]]
   :main enoch.core
   :aot :all
   :resource-paths ["resources"]

@@ -1,12 +1,5 @@
 {:ultrasonic-sensor-boundary 20.0
  :noise-threshold 200.0
  :max-empty-frames 3
- ;:auth-token-url "https://eastus.api.cognitive.microsoft.com/sts/v1.0/issueToken"
- :auth-token-url "https://api.cognitive.microsoft.com/sts/v1.0/issueToken" ; legacy
- ;:endpoints {:interactive  "wss://eastus.stt.speech.microsoft.com/speech/recognition/interactive/cognitiveservices/v1"
- ;            :conversation "wss://eastus.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1"
- ;            :dictation    "wss://eastus.stt.speech.microsoft.com/speech/recognition/dictation/cognitiveservices/v1"}
- :endpoints {:interactive  "wss://speech.platform.bing.com/speech/recognition/interactive/cognitiveservices/v1" ; legacy
-             :conversation "wss://speech.platform.bing.com/speech/recognition/conversation/cognitiveservices/v1"
-             :dictation    "wss://speech.platform.bing.com/speech/recognition/dictation/cognitiveservices/v1"}
+ :stt-request-url "https://eastus.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=%s&format=%s"
  }
