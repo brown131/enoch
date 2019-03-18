@@ -24,6 +24,7 @@
   (try
     (async/close! microphone-chan)
     (async/close! message-chan)
+    (async/close! action-chan)
     (async/close! drive-chan)
     (async/close! shutdown-chan)
     (ultrasonic-stop 1)
@@ -35,8 +36,9 @@
   (log/set-config! @logger-config)
   (if (= (first args) "--center")
     (center-servos)
-    (let [microphone-chan (async/chan 100)
-          message-chan (async/chan 10)
+    (let [microphone-chan (async/chan 50)
+          response-chan (async/chan 50)
+          action-chan (async/chan 50)
           drive-chan (async/chan 10)
           shutdown-chan (async/chan 10)]
       (try
@@ -44,18 +46,17 @@
 
         ;; Start go-blocks.
         (go-microphone microphone-chan)
-        (go-send-stt-request microphone-chan message-chan shutdown-chan)
-        (go-process-response message-chan)
+        (go-send-stt-request microphone-chan response-chan shutdown-chan)
+        (go-process-response response-chan action-chan)
+        (go-process-action action-chan)
         ;(go-speaker microphone-chan)
 
         ;; Start I/O threads.
         (do-driver drive-chan shutdown-chan)
         (do-ultrasonic-sensor (:ultrasonic-sensor-boundary @config-properties) drive-chan)
 
-        (async/put! drive-chan [:forward 20])
-        ;(async/<!! shutdown-chan)
-        (read-line)
+        (async/<!! shutdown-chan)
         (catch Exception e
           (log/error e "Error running enoch"))
         (finally
-          (shutdown microphone-chan message-chan drive-chan shutdown-chan))))))
+          (shutdown microphone-chan response-chan drive-chan shutdown-chan))))))

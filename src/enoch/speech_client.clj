@@ -11,27 +11,33 @@
 (def language "en-US")
 (def response-format "simple")
 
-(defn go-process-response [message-chan]
-  (async/go-loop [response (async/<! message-chan)]
+(def actions ["forward" "left" "right" "reverse" "stop" "shutdown"])
+
+(defn go-process-response [response-chan action-chan]
+  (async/go-loop [response (async/<! response-chan)]
     (when response
       (log/debug "<<" response)
       (if (= (:status response) 200)
         (let [body (json/read-str (:body response))]
           (case (get body "RecognitionStatus")
-            "Success" (case response-format
-                        "simple" (log/info "Simple" (get body "DisplayText"))
-                        "detailed" (log/info "Detailed" (get (first (get body "NBest")) "Display"))
-                        (log/info "Unexpected response format."))
+            "Success" (when-let [text (lower-case (case response-format
+                                                    "simple" (get body "DisplayText")
+                                                    "detailed" (get (first (get body "NBest")) "Display")
+                                                    (log/info "Unexpected response format.")))]
+                        (loop [action actions]
+                          (if (s/index-of text action)
+                            (async/put! action-chan (keywork action))
+                            (recur (rest actions))))
             "InitialSilenceTimeout" nil
             "Error" (log/error "Error response" response)
             (log/error "Unrecognized status [" (get body "RecognitionStatus") "]")))
         (log/error "HTTP error response" response))
-      (recur (async/<! message-chan)))))
+      (recur (async/<! response-chan)))))
 
 (defn go-send-stt-request "Send audio from the audio channel."
-  [microphone-chan message-chan shutdown-chan]
+  [microphone-chan response-chan shutdown-chan]
   (async/go-loop []
-    ;; Wait for either audio or a shutdown.
+    ;; Wait for either the microphone or a shutdown.
     (let [[buffer ch] (async/alts!! [microphone-chan shutdown-chan])]
       (log/debug "buffer" (count buffer))
       (when (= ch shutdown-chan)
@@ -46,7 +52,7 @@
                               :content-type "audio/wav; codecs=audio/pcm; samplerate=16000"
                               :body (byte-array buffer)
                               :async? true}
-                         #(async/put! message-chan %)
+                         #(async/put! response-chan %)
                          #(log/error "Web socket error" %)))
           (catch Exception e
             (log/error e)))

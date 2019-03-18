@@ -1,5 +1,4 @@
 {:ultrasonic-sensor-boundary 20.0
  :noise-threshold 200.0
  :max-empty-frames 3
- :stt-request-url "https://eastus.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=%s&format=%s"
- }
+ :stt-request-url "https://eastus.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=%s&format=%s"}
