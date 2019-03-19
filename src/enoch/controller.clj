@@ -2,10 +2,15 @@
   (:require [clojure.core.async :as async]
             [enoch.driver :refer :all]))
 
-(defn go-process-action [action-chan drive-chan shutdown-chan]
+(defn go-process-action [action-chan shutdown-chan]
   (async/go-loop [action (async/<! action-chan)]
     (when action
-      (case action
-        (keys drive-commands) (async/put! drive-chan (action drive-commands))
-        :shutdown (async/close! shutdown-chan))
-      (recur (async/<! action-chan)))))
+      (let [speed 20] ; TODO
+        (case action
+          :forward  (drive-forward speed)
+          :reverse  (drive-reverse speed)
+          :left     (drive-left speed)
+          :right    (drive-right speed)
+          :stop     (drive-stop)
+          :shutdown (async/close! shutdown-chan))
+        (recur (async/<! action-chan))))))

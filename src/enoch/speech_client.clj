@@ -11,26 +11,26 @@
 (def language "en-US")
 (def response-format "simple")
 
-(def actions ["forward" "left" "right" "reverse" "stop" "shutdown"])
+(def actions ["forward" "left" "right" "reverse" "stop" "shut down"])
 
-(defn go-process-response [response-chan action-chan]
+(defn go-process-stt-response [response-chan action-chan]
   (async/go-loop [response (async/<! response-chan)]
     (when response
-      (log/debug "<<" response)
+      ;(log/debug "<<" response)
       (if (= (:status response) 200)
         (let [body (json/read-str (:body response))]
-          (case (get body "RecognitionStatus")
-            "Success" (when-let [text (lower-case (case response-format
+          (case (s/trim (get body "RecognitionStatus"))
+            "Success" (when-let [text (s/lower-case (case response-format
                                                     "simple" (get body "DisplayText")
                                                     "detailed" (get (first (get body "NBest")) "Display")
                                                     (log/info "Unexpected response format.")))]
-                        (loop [action actions]
-                          (if (s/index-of text action)
-                            (async/put! action-chan (keywork action))
-                            (recur (rest actions))))
+                        (log/debug "Text:" text)
+                        (when-let [action (first (filter #(s/index-of text %) actions))]
+                          (log/debug "Action:" (keyword (s/replace action #" " "")))
+                          (async/put! action-chan (keyword (s/replace action #" " "")))))
             "InitialSilenceTimeout" nil
             "Error" (log/error "Error response" response)
-            (log/error "Unrecognized status [" (get body "RecognitionStatus") "]")))
+            (log/error "Unrecognized status" (get body "RecognitionStatus"))))
         (log/error "HTTP error response" response))
       (recur (async/<! response-chan)))))
 
@@ -39,7 +39,7 @@
   (async/go-loop []
     ;; Wait for either the microphone or a shutdown.
     (let [[buffer ch] (async/alts!! [microphone-chan shutdown-chan])]
-      (log/debug "buffer" (count buffer))
+      ;(log/debug "buffer" (count buffer))
       (when (= ch shutdown-chan)
         (log/info "Send STT request shutdown"))
       (when (not= ch shutdown-chan)
@@ -47,13 +47,13 @@
           (let [url (format (:stt-request-url @config-properties) language response-format)
                 headers {"Ocp-Apim-Subscription-Key" (:speech-recognition-api-key @secret-properties)
                          "Accept" "eapplication/json;text/xml"}]
-            (log/debug ">>" url headers (count buffer))
+            ;(log/debug ">>" url headers (count buffer))
             (client/post url {:headers headers
                               :content-type "audio/wav; codecs=audio/pcm; samplerate=16000"
                               :body (byte-array buffer)
                               :async? true}
                          #(async/put! response-chan %)
-                         #(log/error "Web socket error" %)))
+                         #(log/error "STT request error" %)))
           (catch Exception e
             (log/error e)))
         (recur)))))
