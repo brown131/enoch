@@ -41,14 +41,13 @@
           action-chan (async/chan 50)
           shutdown-chan (async/chan 10)]
       (try
-        (log/info "Staring enoch")
+        (log/info "Starting enoch")
 
         ;; Start go-blocks.
         (go-microphone microphone-chan)
         (go-send-stt-request microphone-chan response-chan shutdown-chan)
         (go-process-stt-response response-chan action-chan)
         (go-process-action action-chan shutdown-chan)
-        ;(go-speaker microphone-chan)
 
         ;; Start I/O threads.
         (do-ultrasonic-sensor (:ultrasonic-sensor-boundary @config-properties) action-chan)

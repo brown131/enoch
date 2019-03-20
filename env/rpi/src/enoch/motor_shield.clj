@@ -149,7 +149,7 @@
   (.low (get-in @ultrasonic [id :trigger-pin]))
   
   (let [timed-out (atom false)
-        too-long #(reset! timed-out (> (- (System/currentTimeMillis) %) 200))
+        too-long #(reset! timed-out (> (- (System/currentTimeMillis) %) 1000))
         start (let [started (System/currentTimeMillis)]
                 (while (and (.isLow (get-in @ultrasonic [id :echo-pin]))
 		            (not (too-long started))))

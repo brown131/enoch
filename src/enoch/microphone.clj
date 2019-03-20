@@ -30,8 +30,12 @@
                                                 (.getFrameSize audio-format)))
         wave-output-stream (ByteArrayOutputStream.)]
     ;; Create a wave file from the buffers sounds.
+    (log/debug "creating wave buffer")
     (AudioSystem/write wave-audio-stream AudioFileFormat$Type/WAVE wave-output-stream)
-    (async/put! microphone-chan (.toByteArray wave-output-stream))
+    (let [wave-buffer (.toByteArray wave-output-stream)]
+      (with-open [out (io/output-stream (io/file (str "/tmp/" (System/currentTimeMillis) ".wav")))]
+        (.write out wave-buffer))
+      (async/put! microphone-chan wave-buffer))
 
     ;; Clean-up.
     (.flush wave-output-stream)

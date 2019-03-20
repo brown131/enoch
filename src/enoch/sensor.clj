@@ -9,9 +9,8 @@
   (async/thread
     (loop [distance (ultrasonic-check 1)]
       (when distance
-        (log/debug "distance" distance)
-        (if (and (not= distance :timed-out)
-                 (< distance boundary))
+        (when (and (not= distance :timed-out) (< distance boundary))
           ;; TODO Have it back-up from the obstacle and continue (:wander mode?)
-          (async/put! action-chan [:stop 0])
-          (recur (ultrasonic-check 1)))))))
+	  (log/debug "Boundary breached")
+          (async/put! action-chan :stop))
+        (recur (ultrasonic-check 1))))))
