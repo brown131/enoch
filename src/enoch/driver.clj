@@ -60,20 +60,3 @@
     (motor-forward i speed))
   (doseq [i [3 4]]
     (motor-reverse i speed)))
-
-(def drive-commands {:forward drive-forward
-                     :reverse drive-reverse
-                     :left    drive-left
-                     :right   drive-right
-                     :stop    drive-stop})
-
-(defn do-driver "Process drive commands."
-  [drive-chan shutdown-chan]
-  (async/thread
-    (loop [[direction speed] (async/<!! drive-chan)]
-      (when direction
-        ((get drive-commands direction) speed)
-        (if (= direction :stop)
-          ;; TODO Remove when we have a :shutdown voice command.
-          (async/put! shutdown-chan :shutdown)
-          (recur (async/<!! drive-chan)))))))

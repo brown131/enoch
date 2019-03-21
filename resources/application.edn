@@ -2,5 +2,5 @@
  :noise-threshold 200.0
  :max-empty-frames 3
  :default-speed 30
- 
+ :amplification-factor 2.0
  :stt-request-url "https://eastus.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=%s&format=%s"}
