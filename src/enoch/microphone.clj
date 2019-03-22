@@ -48,17 +48,17 @@
 (defn create-wave-buffer [wave-data num-bytes]
   (vec (concat (mapv byte "RIFF") ; chunk id
                (long->little-endian-bytes (+ 36 num-bytes)) ; chunk size
-               (mapv byte "WAVE") ; format
-               (mapv byte "fmt ") ; subchunk 1 id
-               (long->little-endian-bytes 16) ; subchunk size
-               (short->little-endian-bytes 1) ; audio format PCM=1 (little-endian)
-               (short->little-endian-bytes 1) ; num channels mono=1 (little-endian)
-               (long->little-endian-bytes 16000) ; sample rate
-               (long->little-endian-bytes 32000) ; byte rate
-               (short->little-endian-bytes 2) ; block align
-               (short->little-endian-bytes 16) ; bits per sample
-               (mapv byte "data") ; subchunk 2 id
-               (long->little-endian-bytes 24)
+               (mapv byte "WAVE")                           ; format
+               (mapv byte "fmt ")                           ; subchunk 1 id
+               (long->little-endian-bytes 16)               ; subchunk size
+               (short->little-endian-bytes 1)               ; audio format PCM=1 (little-endian)
+               (short->little-endian-bytes 1)               ; num channels mono=1 (little-endian)
+               (long->little-endian-bytes 16000)            ; sample rate
+               (long->little-endian-bytes 32000)            ; byte rate
+               (short->little-endian-bytes 2)               ; block align
+               (short->little-endian-bytes 16)              ; bits per sample
+               (mapv byte "data")                           ; subchunk 2 id
+               (long->little-endian-bytes num-bytes)
                ;; This is little-endian shorts. RIFX allows for big-endian but does the API support it?
                (shorts->little-endian-bytes wave-data)))) ; subchunk 2 size
 
@@ -99,6 +99,8 @@
               (if end-of-clip?
                 (end-the-clip output-buffer-stream microphone-chan)
                 (when has-sound?
+                  (when (pos? empty-frames)
+                    (log/debug "Sound detected."))
                   (.write output-buffer-stream bytes 0 num-bytes)))
                 (recur (.read target-data-line bytes 0 num-bytes)
                        (if end-of-clip? (ByteArrayOutputStream.) output-buffer-stream)

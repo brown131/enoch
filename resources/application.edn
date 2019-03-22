@@ -1,6 +1,6 @@
 {:ultrasonic-sensor-boundary 20.0
  :noise-threshold 200.0
- :max-empty-frames 3
+ :max-empty-frames 2
  :default-speed 30
  :language "EN-us" ; "de-DE"
  :response-format "simple"
