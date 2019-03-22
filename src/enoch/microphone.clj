@@ -32,7 +32,7 @@
 
 (defn amplify-sound-clip
   [shorts rms peak]
-  (map #(if (> % rms) (short (min (* % (/ 32767.0 peak)) Short/MAX_VALUE)) %) shorts))
+  (map #(if (> (Math/abs (int %)) rms) (short (min (* % (/ 32767.0 peak)) Short/MAX_VALUE)) %) shorts))
 
 (defn long->little-endian-bytes [num]
   (mapv #(unchecked-byte (bit-and 0xff (bit-shift-right num (* 8 %)))) (range 0 4)))

@@ -21,7 +21,6 @@
 
 (defn shutdown "Close channels, stop tasks, and free resources."
   [microphone-chan response-chan action-chan shutdown-chan]
-  (log/info "Shutting down.")
   (try
     (async/close! microphone-chan)
     (async/close! response-chan)
@@ -30,7 +29,9 @@
     (ultrasonic-stop 1)
     (gpio-shutdown)
     (catch Exception e
-      (log/error e "Error shutting down"))))
+      (log/error e "Error shutting down"))
+    (finally
+      (log/info "Shut down."))))
 
 (defn -main [& args]
   (log/set-config! @logger-config)
