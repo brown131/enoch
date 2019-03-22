@@ -8,9 +8,6 @@
 
 (log/refer-timbre)
 
-(def language "en-US")
-(def response-format "simple")
-
 (def actions ["forward" "left" "right" "reverse" "stop" "shut down"])
 
 (defn go-process-stt-response [response-chan action-chan]
@@ -20,15 +17,15 @@
       (if (= (:status response) 200)
         (let [body (json/read-str (:body response))]
           (case (s/trim (get body "RecognitionStatus"))
-            "Success" (when-let [text (s/lower-case (case response-format
-                                                    "simple" (get body "DisplayText")
-                                                    "detailed" (get (first (get body "NBest")) "Display")
-                                                    (log/info "Unexpected response format.")))]
+            "Success" (when-let [text (s/lower-case (case (:response-format @config-properties)
+                                                      "simple" (get body "DisplayText")
+                                                      "detailed" (get (first (get body "NBest")) "Display")
+                                                      (log/info "Unexpected response format.")))]
                         (log/debug "Text:" text)
                         (when-let [action (first (filter #(s/index-of text %) actions))]
                           (log/debug "Action:" (keyword (s/replace action #" " "")))
                           (async/put! action-chan (keyword (s/replace action #" " "")))))
-            "InitialSilenceTimeout" nil
+            "InitialSilenceTimeout" (log/debug "Silence time-out")
             "Error" (log/error "Error response" response)
             (log/error "Unrecognized status" (get body "RecognitionStatus"))))
         (log/error "HTTP error response" response))
@@ -44,7 +41,8 @@
         (log/info "Send STT request shutdown"))
       (when (not= ch shutdown-chan)
         (try
-          (let [url (format (:stt-request-url @config-properties) language response-format)
+          (let [url (format (:stt-request-url @config-properties)
+                            (:language @config-properties) (:response-format@config-properties) )
                 headers {"Ocp-Apim-Subscription-Key" (:speech-recognition-api-key @secret-properties)
                          "Accept" "eapplication/json;text/xml"}]
             ;(log/debug ">>" url headers (count buffer))
