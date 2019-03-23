@@ -52,10 +52,10 @@
   (reduce #(max %1 (Math/abs (int %2))) 0 shorts))
 
 (defn amplify-sound-clip
-  [shorts rms peak]
+  [shorts peak]
   (map #(cond
-          (> % rms) (short (min (* % (/ Short/MAX_VALUE peak)) Short/MAX_VALUE))
-          (< % (- rms)) (short (* % (/ Short/MAX_VALUE peak)))
+          (pos? %) (short (min (* % (/ 32767.0 peak)) 32767.0))
+          (neg? %) (short (* % (/ 32767.0 peak)))
           :else %) shorts))
 
 (defn create-wave-buffer [wave-data num-bytes]
@@ -67,12 +67,12 @@
                 (shorts->little-endian-bytes wave-data)]))    ; subchunk 2 size
 
 (defn end-the-clip [output-buffer-stream microphone-chan]
-  (let [bytes (.toByteArray output-buffer-stream)
-        num-bytes (count bytes)
+  ;; TODO Reduce number of passes through the data
+  (let [num-bytes (.size output-buffer-stream)
+        bytes (.toByteArray output-buffer-stream)
         shorts (bytes->shorts bytes num-bytes)
-        rms (root-mean-square shorts (count shorts))
         peak (peak-value shorts)
-        clip (amplify-sound-clip shorts rms peak)
+        clip (amplify-sound-clip shorts peak)
         wave-buffer (create-wave-buffer clip num-bytes)]
     ;; Wave file is for testing only.
     (with-open [out (io/output-stream (io/file (str "/tmp/" (System/currentTimeMillis) ".wav")))]
@@ -102,7 +102,7 @@
               ;(log/debug "hs?" has-sound? "eoc?" end-of-clip? "ef" empty-frames)
               (if end-of-clip?
                 (end-the-clip output-buffer-stream microphone-chan)
-                (when has-sound?
+                (when (or has-sound? (zero? empty-frames)) ; Include 1 empty frame at end to avoid clipping.
                   (when (pos? empty-frames)
                     (log/debug "Sound detected."))
                   (.write output-buffer-stream bytes 0 num-bytes)))
