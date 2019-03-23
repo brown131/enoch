@@ -1,6 +1,5 @@
 (ns enoch.driver "Literally drives the car."
-  (:require [clojure.core.async :as async]
-            [taoensso.timbre :as log]
+  (:require [taoensso.timbre :as log]
             [enoch.motor-shield :refer :all]))
 
 (log/refer-timbre)
@@ -28,7 +27,7 @@
       (swap! car-state assoc :mode :stop :speed 0))))
 
 (defn change-state [direction speed]
-  (when-let [arrow (direction direction-arrows)]
+  (when (direction direction-arrows)
     (change-arrow direction)
 
     ;; Stop car first if moving in a new direction.

@@ -2,8 +2,7 @@
   (:require [clojure.core.async :as async]
             [taoensso.timbre :as log]
             [clojure.java.io :refer [file output-stream]])
-  (:import [javax.sound.sampled AudioSystem AudioFormat DataLine DataLine$Info SourceDataLine
-                                AudioInputStream AudioFileFormat AudioFileFormat$Type]))
+  (:import [javax.sound.sampled AudioSystem AudioFormat DataLine$Info SourceDataLine]))
 
 (log/refer-timbre)
 

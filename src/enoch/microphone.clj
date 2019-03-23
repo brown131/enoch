@@ -3,15 +3,36 @@
             [clojure.java.io :as io]
             [taoensso.timbre :as log]
             [enoch.config :refer [config-properties secret-properties]])
-  (:import [javax.sound.sampled AudioSystem AudioFormat DataLine$Info TargetDataLine
-                                AudioInputStream AudioFileFormat AudioFileFormat$Type]
-           [java.io ByteArrayInputStream ByteArrayOutputStream]
+  (:import [javax.sound.sampled AudioSystem AudioFormat DataLine$Info TargetDataLine]
+           [java.io ByteArrayOutputStream]
            [java.lang Math Short System]
            [java.nio ByteBuffer ShortBuffer]))
 
 (log/refer-timbre)
 
 (def audio-format (AudioFormat. 16000 16 1 true true))
+
+(defn long->little-endian-bytes [num]
+  (mapv #(unchecked-byte (bit-and 0xff (bit-shift-right num (* 8 %)))) (range 0 4)))
+
+(defn short->little-endian-bytes [num]
+  (mapv #(bit-and 0xff (bit-shift-right num (* 8 %))) (range 0 2)))
+
+(defn shorts->little-endian-bytes "Converts an array of shorts to a byte array in litle-endian order."
+  [shorts]
+  (byte-array (reduce #(conj %1 (unchecked-byte (bit-and %2 0xff))
+                             (unchecked-byte (bit-shift-right %2 8))) [] shorts)))
+
+(def wave-header (reduce into (mapv byte "WAVE")             ; format
+                         [(mapv byte "fmt ")                 ; subchunk 1 id
+                          (long->little-endian-bytes 16)     ; subchunk size
+                          (short->little-endian-bytes 1)     ; audio format PCM=1 (little-endian)
+                          (short->little-endian-bytes 1)     ; num channels mono=1 (little-endian)
+                          (long->little-endian-bytes 16000)  ; sample rate
+                          (long->little-endian-bytes 32000)  ; byte rate
+                          (short->little-endian-bytes 2)     ; block align
+                          (short->little-endian-bytes 16)    ; bits per sample
+                          (mapv byte "data")]))              ; subchunk 2 id
 
 (defn bytes->shorts "Converts a byte array to a short array."
   [bytes num-bytes]
@@ -32,35 +53,18 @@
 
 (defn amplify-sound-clip
   [shorts rms peak]
-  (map #(if (> (Math/abs (int %)) rms) (short (min (* % (/ 32767.0 peak)) Short/MAX_VALUE)) %) shorts))
-
-(defn long->little-endian-bytes [num]
-  (mapv #(unchecked-byte (bit-and 0xff (bit-shift-right num (* 8 %)))) (range 0 4)))
-
-(defn short->little-endian-bytes [num]
-  (mapv #(bit-and 0xff (bit-shift-right num (* 8 %))) (range 0 2)))
-
-(defn shorts->little-endian-bytes "Converts an array of shorts to a byte array in litle-endian order."
-  [shorts]
-  (byte-array (reduce #(conj %1 (unchecked-byte (bit-and %2 0xff))
-                             (unchecked-byte (bit-shift-right %2 8))) [] shorts)))
+  (map #(cond
+          (> % rms) (short (min (* % (/ Short/MAX_VALUE peak)) Short/MAX_VALUE))
+          (< % (- rms)) (short (* % (/ Short/MAX_VALUE peak)))
+          :else %) shorts))
 
 (defn create-wave-buffer [wave-data num-bytes]
-  (vec (concat (mapv byte "RIFF") ; chunk id
-               (long->little-endian-bytes (+ 36 num-bytes)) ; chunk size
-               (mapv byte "WAVE")                           ; format
-               (mapv byte "fmt ")                           ; subchunk 1 id
-               (long->little-endian-bytes 16)               ; subchunk size
-               (short->little-endian-bytes 1)               ; audio format PCM=1 (little-endian)
-               (short->little-endian-bytes 1)               ; num channels mono=1 (little-endian)
-               (long->little-endian-bytes 16000)            ; sample rate
-               (long->little-endian-bytes 32000)            ; byte rate
-               (short->little-endian-bytes 2)               ; block align
-               (short->little-endian-bytes 16)              ; bits per sample
-               (mapv byte "data")                           ; subchunk 2 id
-               (long->little-endian-bytes num-bytes)
-               ;; This is little-endian shorts. RIFX allows for big-endian but does the API support it?
-               (shorts->little-endian-bytes wave-data)))) ; subchunk 2 size
+  (reduce into (mapv byte "RIFF")                             ; chunk id
+               [(long->little-endian-bytes (+ 36 num-bytes))  ; chunk size
+                wave-header
+                (long->little-endian-bytes num-bytes)
+                ;; These are little-endian shorts. RIFX allows for big-endian but does the API support it?
+                (shorts->little-endian-bytes wave-data)]))    ; subchunk 2 size
 
 (defn end-the-clip [output-buffer-stream microphone-chan]
   (let [bytes (.toByteArray output-buffer-stream)
