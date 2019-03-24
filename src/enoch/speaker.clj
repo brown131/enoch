@@ -21,14 +21,13 @@
                        (conj %1 ((first %2) espeak-args) (str (second %2)))
                        (log/error "Invalid argument" (first %2)))
                     ["espeak" (format "'%s'" text)] (first args))]
+    (log/info "Saying:" text)
     (reset! speaking? true)
-    (log/debug "Saying:" text)
     (apply sh cmd)
     (reset! speaking? false)))
 
 (defn go-speaker "Read data from the audio channel and send it to the speaker."
   [speaker-chan]
-  ;; TODO
   (async/go
     (try
       (loop [text (async/<! speaker-chan)]
