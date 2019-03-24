@@ -25,7 +25,7 @@
         peak (peak-value clip)]
     (println rms)
     (is (= '(1 11 20 17163 31206 32767 17163 17163 18724 31 2 10)
-           (amplify-sound-clip clip rms peak)))))
+           (amplify-sound-clip clip peak)))))
 
 (deftest test-create-wave-buffer
   (let [clip (short-array [258 11 20 110 200 210 110 120 31 513 10])

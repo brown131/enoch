@@ -2,10 +2,11 @@
   (:require [clojure.core.async :as async]
             [clojure.java.io :as io]
             [taoensso.timbre :as log]
-            [enoch.config :refer [config-properties secret-properties]])
+            [enoch.config :refer [config-properties secret-properties]]
+            [enoch.speaker :refer [speaking?]])
   (:import [javax.sound.sampled AudioSystem AudioFormat DataLine$Info TargetDataLine]
            [java.io ByteArrayOutputStream]
-           [java.lang Math Short System]
+           [java.lang Math System]
            [java.nio ByteBuffer ShortBuffer]))
 
 (log/refer-timbre)
@@ -95,17 +96,17 @@
                empty-frames (:max-empty-frames @config-properties)]
           (when (pos? num-bytes-read)
             (let [shorts (bytes->shorts bytes num-bytes-read)
-                  rms (root-mean-square shorts (/ num-bytes-read 2))
-                  has-sound? (> rms (:noise-threshold @config-properties))
-                  end-of-clip? (and (pos? (.size output-buffer-stream))
-                                    (>= empty-frames (:max-empty-frames @config-properties)))]
-              ;(log/debug "hs?" has-sound? "eoc?" end-of-clip? "ef" empty-frames)
-              (if end-of-clip?
-                (end-the-clip output-buffer-stream microphone-chan)
-                (when (or has-sound? (zero? empty-frames)) ; Include 1 empty frame at end to avoid clipping.
-                  (when (pos? empty-frames)
-                    (log/debug "Sound detected."))
-                  (.write output-buffer-stream bytes 0 num-bytes)))
+                    rms (root-mean-square shorts (/ num-bytes-read 2))
+                    has-sound? (and (> rms (:noise-threshold @config-properties)) (not @speaking?))
+                    end-of-clip? (and (pos? (.size output-buffer-stream))
+                                      (>= empty-frames (:max-empty-frames @config-properties)))]
+                ;(log/debug "hs?" has-sound? "eoc?" end-of-clip? "ef" empty-frames)
+                (if end-of-clip?
+                  (end-the-clip output-buffer-stream microphone-chan)
+                  (when (or has-sound? (zero? empty-frames)) ; Include 1 empty frame at end to avoid clipping.
+                    (when (pos? empty-frames)
+                      (log/debug "Sound detected."))
+                    (.write output-buffer-stream bytes 0 num-bytes)))
                 (recur (.read target-data-line bytes 0 num-bytes)
                        (if end-of-clip? (ByteArrayOutputStream.) output-buffer-stream)
                        (if has-sound? 0 (inc empty-frames))))))

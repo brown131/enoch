@@ -8,9 +8,14 @@
 
 (log/refer-timbre)
 
-(def actions ["forward" "left" "right" "reverse" "stop" "shut down"])
+(def commands {"forward"    :forward
+               "left"       :left
+               "right"      :right
+               "reverse"    :reverse
+               "stop"       :stop
+               "shut down"  :shutdown})
 
-(defn go-process-stt-response [response-chan action-chan]
+(defn go-process-stt-response [response-chan command-chan speaker-chan]
   (async/go-loop [response (async/<! response-chan)]
     (when response
       ;(log/debug "<<" response)
@@ -22,9 +27,11 @@
                                                       "detailed" (get (first (get body "NBest")) "Display")
                                                       (log/info "Unexpected response format.")))]
                         (log/debug "Text:" text)
-                        (when-let [action (first (filter #(s/index-of text %) actions))]
-                          (log/debug "Action:" (keyword (s/replace action #" " "")))
-                          (async/put! action-chan (keyword (s/replace action #" " "")))))
+                        (if-let [command (first (filter #(s/index-of text %) (keys commands)))]
+                          (do
+                            (log/debug "Command:" (get commands command))
+                            (async/put! command-chan (get commands command)))
+                          (async/put! speaker-chan (str "I do not understand " text))))
             "InitialSilenceTimeout" (log/debug "Silence time-out")
             "Error" (log/error "Error response" response)
             (log/error "Unrecognized status" (get body "RecognitionStatus"))))

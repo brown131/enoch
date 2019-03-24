@@ -20,11 +20,12 @@
       (log/error e "Uncaught exception on" (.getName thread)))))
 
 (defn shutdown "Close channels, stop tasks, and free resources."
-  [microphone-chan response-chan action-chan shutdown-chan]
+  [microphone-chan speaker-chan response-chan command-chan shutdown-chan]
   (try
     (async/close! microphone-chan)
+    (async/close! speaker-chan)
     (async/close! response-chan)
-    (async/close! action-chan)
+    (async/close! command-chan)
     (async/close! shutdown-chan)
     (ultrasonic-stop 1)
     (gpio-shutdown)
@@ -35,26 +36,28 @@
 
 (defn -main [& args]
   (log/set-config! @logger-config)
-  (if (= (first args) "--center")
-    (center-servos)
-    (let [microphone-chan (async/chan 50)
-          response-chan (async/chan 50)
-          action-chan (async/chan 50)
-          shutdown-chan (async/chan 10)]
-      (try
-        (log/info "Starting enoch")
+  (when (= (first args) "--center")
+    (center-servos))
+  (let [microphone-chan (async/chan 50)
+        speaker-chan (async/chan 50)
+        response-chan (async/chan 50)
+        command-chan (async/chan 50)
+        shutdown-chan (async/chan 10)]
+    (try
+      (log/info "Starting enoch")
 
-        ;; Start go-blocks.
-        (go-microphone microphone-chan)
-        (go-send-stt-request microphone-chan response-chan shutdown-chan)
-        (go-process-stt-response response-chan action-chan)
-        (go-process-action action-chan shutdown-chan)
+      ;; Start go-blocks.
+      (go-microphone microphone-chan)
+      (go-speaker speaker-chan)
+      (go-send-stt-request microphone-chan response-chan shutdown-chan)
+      (go-process-stt-response response-chan command-chan speaker-chan)
+      (go-process-command command-chan speaker-chan shutdown-chan)
 
-        ;; Start I/O threads.
-        (do-ultrasonic-sensor (:ultrasonic-sensor-boundary @config-properties) action-chan)
+      ;; Start I/O threads.
+      (do-ultrasonic-sensor (:ultrasonic-sensor-boundary @config-properties) command-chan)
 
-        (async/<!! shutdown-chan)
-        (catch Exception e
-          (log/error e "Error running enoch"))
-        (finally
-          (shutdown microphone-chan response-chan action-chan shutdown-chan))))))
+      (async/<!! shutdown-chan)
+      (catch Exception e
+        (log/error e "Error running enoch"))
+      (finally
+        (shutdown microphone-chan speaker-chan response-chan command-chan shutdown-chan)))))
