@@ -33,6 +33,13 @@
 
 
 ;;; Arrow
+;;;      3
+;;;      ^
+;;;      |
+;;; 2 <-- --> 4
+;;;      |
+;;;      v
+;;;      1
 
 
 (defn arrow-init "Initialize an arrow with an id of 1-4."
@@ -52,6 +59,12 @@
 
 
 ;;; Motor
+;;;     ____
+;;;    | ^^ |
+;;; 3 O|    |O 1
+;;;    |    |
+;;; 4 O|    |O 2
+;;;    |____|
 
 
 (defn motor-init "Initialize a motor with an id of 1-4."
@@ -103,6 +116,8 @@
 
 
 ;;; Servo
+;;; 1 = Horizontal
+;;; 2 = Vertical
 
 
 (defn servo-init [id]
@@ -127,6 +142,7 @@
 
 
 ;;; Ultrasonic
+;;; 1 = Front
 
 
 (defn ultrasonic-init "Initialize a sensor by id."

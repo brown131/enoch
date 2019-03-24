@@ -1,7 +1,7 @@
 {:ultrasonic-sensor-boundary 20.0
  :noise-threshold 200.0
  :max-empty-frames 2
- :default-speed 30
+ :default-speed 40
  :language "EN-us" ; "de-DE"
  :response-format "simple"
  :stt-request-url "https://eastus.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=%s&format=%s"}

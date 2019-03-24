@@ -48,14 +48,14 @@
      
 (defn drive-left [speed]
   (change-state :left speed)
-  (doseq [i [3 4]]
-     (motor-forward i speed))
   (doseq [i [1 2]]
-     (motor-forward i (/ speed 2))))
+     (motor-forward i speed))
+  (doseq [i [3 4]]
+    (motor-forward i (/ speed 2))))
      
 (defn drive-right [speed]
   (change-state :right speed)
   (doseq [i [1 2]]
-    (motor-forward i speed))
+    (motor-forward i (/ speed 2)))
   (doseq [i [3 4]]
-    (motor-forward i (/ speed 2))))
+    (motor-forward i speed)))

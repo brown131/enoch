@@ -26,11 +26,8 @@
                                                       "simple" (get body "DisplayText")
                                                       "detailed" (get (first (get body "NBest")) "Display")
                                                       (log/info "Unexpected response format.")))]
-                        (log/debug "Text:" text)
                         (if-let [command (first (filter #(s/index-of text %) (keys commands)))]
-                          (do
-                            (log/debug "Command:" (get commands command))
-                            (async/put! command-chan (get commands command)))
+                          (async/put! command-chan (get commands command))
                           (async/put! speaker-chan (str "I do not understand " text))))
             "InitialSilenceTimeout" (log/debug "Silence time-out")
             "Error" (log/error "Error response" response)
