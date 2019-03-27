@@ -22,26 +22,26 @@
 (defn drive-forward []
   (when-not (and (= (:mode @car-state) :forward) (= (:direction @car-state) :straight))
     (when (= (:mode @car-state) :reverse)
-      (arrow-off :reverse)
+      (arrow-off :back)
       (stop-motors)
       (Thread/sleep 333))
     (when-not (= (:direction @car-state) :straight)
       (arrow-off (:direction @car-state)))
     (when-not (= (:mode @car-state) :forward)
-      (arrow-on :forward))
+      (arrow-on :front))
     (change-motors)
     (swap! car-state assoc :mode :forward :direction :straight)))
 
 (defn drive-reverse []
   (when-not (and (= (:mode @car-state) :reverse) (= (:direction @car-state) :straight))
     (when (= (:mode @car-state) :forward)
-      (arrow-off :forward)
+      (arrow-off :front)
       (stop-motors)
       (Thread/sleep 333))
     (when-not (= (:direction @car-state) :straight)
       (arrow-off (:direction @car-state)))
     (when-not (= (:mode @car-state) :reverse)
-      (arrow-on :reverse))
+      (arrow-on :back))
     (change-motors)
   (swap! car-state assoc :mode :reverse :direction :straight)))
 
@@ -79,7 +79,7 @@
 
 (defn drive-stop []
   (when-not (= (:mode @car-state) :stop)
-    (arrow-off (:mode @car-state))
+    (arrow-off (if (= (:mode @car-state) :forward) :front :back))
     (when-not (= (:direction @car-state) :straight)
       (arrow-off (:direction @car-state)))
     (stop-motors)
