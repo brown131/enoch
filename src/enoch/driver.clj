@@ -23,7 +23,7 @@
   (when-not (= (:mode @car-state) :stop)
     (arrow-off (:mode @car-state))
     (when-not (= (:direction @car-state) :straight)
-      (arrow-off (:dorection @car-state)))
+      (arrow-off (:direction @car-state)))
     (stop-motors)
     (swap! car-state assoc :mode :stop :direction :straight :speed 0)))
 
