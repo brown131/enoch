@@ -27,7 +27,7 @@
     (async/close! response-chan)
     (async/close! command-chan)
     (async/close! shutdown-chan)
-    (ultrasonic-stop 1)
+    (ultrasonic-stop :front)
     (gpio-shutdown)
     (catch Exception e
       (log/error e "Error shutting down"))

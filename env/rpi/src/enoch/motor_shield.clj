@@ -10,17 +10,17 @@
 
 (def gpio (GpioFactory/getInstance))
 
-(def motor-pins {1 {:enable RaspiPin/GPIO_00 :forward RaspiPin/GPIO_03 :reverse RaspiPin/GPIO_02}
-                 2 {:enable RaspiPin/GPIO_06 :forward RaspiPin/GPIO_04 :reverse RaspiPin/GPIO_05}
-                 3 {:enable RaspiPin/GPIO_12 :forward RaspiPin/GPIO_13 :reverse RaspiPin/GPIO_14}
-                 4 {:enable RaspiPin/GPIO_26 :forward RaspiPin/GPIO_10 :reverse RaspiPin/GPIO_11}})
+(def motor-pins {:front-left {:enable RaspiPin/GPIO_12 :forward RaspiPin/GPIO_13 :reverse RaspiPin/GPIO_14}
+                 :front-right {:enable RaspiPin/GPIO_00 :forward RaspiPin/GPIO_03 :reverse RaspiPin/GPIO_02}
+                 :back-left {:enable RaspiPin/GPIO_26 :forward RaspiPin/GPIO_10 :reverse RaspiPin/GPIO_11}
+                 :back-right {:enable RaspiPin/GPIO_06 :forward RaspiPin/GPIO_04 :reverse RaspiPin/GPIO_05}})
 
-(def arrow-pins {1 RaspiPin/GPIO_23
-                 2 RaspiPin/GPIO_24
-                 3 RaspiPin/GPIO_25
-                 4 RaspiPin/GPIO_27})
+(def arrow-pins {:front RaspiPin/GPIO_25
+                 :back  RaspiPin/GPIO_23
+                 :left  RaspiPin/GPIO_24
+                 :right RaspiPin/GPIO_27})
 
-(def ultrasonic-pins {1 {:echo RaspiPin/GPIO_22 :trigger RaspiPin/GPIO_21}})
+(def ultrasonic-pins {:front {:echo RaspiPin/GPIO_22 :trigger RaspiPin/GPIO_21}})
 
 (def motors (atom nil))
 (def arrows (atom nil))
@@ -33,29 +33,22 @@
 
 
 ;;; Arrow
-;;;      3
-;;;      ^
-;;;      |
-;;; 2 <-- --> 4
-;;;      |
-;;;      v
-;;;      1
 
 
-(defn arrow-init "Initialize an arrow with an id of 1-4."
+(defn arrow-init "Initialize an arrow with an id of :front, :back, :left, or :right."
   [id]
-  (when-not (get @arrows id)
-    (swap! arrows assoc id (.provisionDigitalOutputPin gpio (get arrow-pins id) (str "Arrow" id) PinState/LOW))))
+  (when-not (id @arrows)
+    (swap! arrows assoc id (.provisionDigitalOutputPin gpio (id arrow-pins) (str "Arrow" id) PinState/LOW))))
 
 (defn arrow-on "Lights up an arrow by id."
   [id]
   (arrow-init id)
-  (.high (get @arrows id)))
+  (.high (id @arrows)))
 
 (defn arrow-off "Turns off an arrow by id."
   [id]
   (arrow-init id)
-  (.low (get @arrows id)))
+  (.low (id @arrows)))
 
 
 ;;; Motor
@@ -67,12 +60,12 @@
 ;;;    |____|
 
 
-(defn motor-init "Initialize a motor with an id of 1-4."
+(defn motor-init "Initialize a motor with an id of :front-left :front-right :back-left :back-right."
   [id]
-  (when-not (get @motors id)
+  (when-not (id @motors)
     (swap! motors assoc id {:enable (.provisionDigitalOutputPin gpio (get-in motor-pins [id :enable]) (str "MotorEnable" id))
                             :forward (.provisionDigitalOutputPin gpio (get-in motor-pins [id :forward]) (str "MotorForward" id))
-                            :reverse (.provisionDigitalOutputPin gpio (get-in motor-pins [id :reverse]) (str "MotorReverse" id))}))    (SoftPwm/softPwmCreate (.getAddress (get-in motor-pins [id :forward])) 0 100)
+                            :reverse (.provisionDigitalOutputPin gpio (get-in motor-pins [id :reverse]) (str "MotorReverse" id))}))
     (SoftPwm/softPwmCreate (.getAddress (get-in motor-pins [id :reverse])) 0 100))
 
 (defn motor-forward "Start the motor turning in its configured \"forward\" direction."
@@ -116,13 +109,12 @@
 
 
 ;;; Servo
-;;; 1 = Horizontal
-;;; 2 = Vertical
 
 
-(defn servo-init [id]
+(defn servo-init "Initialize servo with an id of :hortizontal or :vertical."
+  [id]
   (when-not (get @servos id)
-    (let [pin (dec id)
+    (let [pin (if (= id :horizontal) 0 1)
           servo-provider (RPIServoBlasterProvider.)]
       (swap! servos assoc id (.getServoDriver servo-provider (.get (.getDefinedServoPins servo-provider) pin))))))
 
@@ -132,22 +124,21 @@
   [id wait range-fn]
   (servo-init id)
   (doseq [i (range-fn)]
-    (.setServoPulseWidth (get @servos id) i)
+    (.setServoPulseWidth (id @servos) i)
     (Thread/sleep wait)))
 
 (defn servo-stop
   "Stop the servo motor."
   [id]
-  (.setServoPulseWidth (get @servos id) 0))
+  (.setServoPulseWidth (id @servos) 0))
 
 
 ;;; Ultrasonic
-;;; 1 = Front
 
 
-(defn ultrasonic-init "Initialize a sensor by id."
+(defn ultrasonic-init "Initialize a sensor by id, currently only :front."
   [id]
-  (when-not (get @ultrasonic id)
+  (when-not (id @ultrasonic)
     (swap! ultrasonic assoc id {:last-read 0
                                 :echo-pin (.provisionDigitalInputPin gpio (get-in ultrasonic-pins [id :echo])
 			                                             (str "UltrasonicEcho" id))

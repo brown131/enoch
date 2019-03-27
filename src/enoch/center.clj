@@ -11,16 +11,14 @@
 (defn center-servos []
   (try
     (info "Centering horizontal and vertical servos.")
-  
-    ;; Horizontal
-    (servo-rotate 1 wait #(range 180 70 (* -1 step)))
-    (servo-rotate 1 wait #(range 70 130 step))
-    (servo-stop 1)
 
-    ;; Vertical
-    (servo-rotate 2 wait #(range 180 70 (* -1 step)))
-    (servo-rotate 2 wait #(range 70 130 step))
-    (servo-stop 2)
+    (servo-rotate :horizontal wait #(range 180 70 (* -1 step)))
+    (servo-rotate :horizontal wait #(range 70 130 step))
+    (servo-stop :horizontal)
+
+    (servo-rotate :vertical wait #(range 180 70 (* -1 step)))
+    (servo-rotate :vertical wait #(range 70 130 step))
+    (servo-stop :vertical)
 
     (gpio-shutdown)
     (catch Exception e

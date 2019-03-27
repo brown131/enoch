@@ -5,12 +5,11 @@
 
 (log/refer-timbre)
 
-(defn do-ultrasonic-sensor [boundary action-chan]
+(defn do-ultrasonic-sensor [boundary command-chan]
   (async/thread
-    (loop [distance (ultrasonic-check 1)]
+    (loop [distance (ultrasonic-check :front)]
       (when distance
         (when (and (not= distance :timed-out) (< distance boundary))
-          ;; TODO Have it back-up from the obstacle and continue (:wander mode?)
-	  (log/debug "Boundary breached")
-          (async/put! action-chan :stop))
-        (recur (ultrasonic-check 1))))))
+          (log/info "Ultrasonic boundary breached")
+          (async/put! command-chan :stop))
+        (recur (ultrasonic-check :front))))))
