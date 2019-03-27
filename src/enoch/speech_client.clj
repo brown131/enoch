@@ -12,7 +12,9 @@
                "left"       :left
                "right"      :right
                "reverse"    :reverse
-               "stop"       :stop
+               "faster"     :faster
+               "slower"     :slower
+               "stop"       :stop               
                "shut down"  :shutdown})
 
 (defn go-process-stt-response [response-chan command-chan speaker-chan]

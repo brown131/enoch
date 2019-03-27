@@ -6,11 +6,13 @@
 
 (log/refer-timbre)
 
-(def command-actions {:forward  #(drive-forward %)
-                      :reverse  #(drive-reverse %)
-                      :left     #(drive-left %)
-                      :right    #(drive-right %)
-                      :stop     #(drive-stop)
+(def command-actions {:forward  drive-forward
+                      :reverse  drive-reverse
+                      :left     drive-left
+                      :right    drive-right
+                      :faster   drive-faster
+                      :slower   drive-slower
+                      :stop     drive-stop                      
                       :shutdown #(async/close! %)})
 
 (defn go-process-command [command-chan speaker-chan shutdown-chan]
@@ -19,9 +21,10 @@
       (log/debug "Command:" command)
       (let [speed (:default-speed @config-properties)] ; TODO
         (case command
-          (:forward :reverse :left :right) (do
-                                             (async/put! speaker-chan (str "Going " (symbol command)))
-                                             ((command command-actions) speed))
+          (:forward :reverse :left :right :faster :slower)
+          (do
+            (async/put! speaker-chan (str "Going " (symbol command)))
+            ((command command-actions)))
           :stop (do
                   (async/put! speaker-chan "Stopping" )
                   ((command command-actions)))

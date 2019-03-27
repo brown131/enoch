@@ -19,14 +19,6 @@
   (doseq [id [:front-left :front-right :back-left :back-right]]
     (motor-stop id)))
 
-(defn drive-stop []
-  (when-not (= (:mode @car-state) :stop)
-    (arrow-off (:mode @car-state))
-    (when-not (= (:direction @car-state) :straight)
-      (arrow-off (:direction @car-state)))
-    (stop-motors)
-    (swap! car-state assoc :mode :stop :direction :straight :speed 0)))
-
 (defn drive-forward []
   (when-not (and (= (:mode @car-state) :forward) (= (:direction @car-state) :straight))
     (when (= (:mode @car-state) :reverse)
@@ -59,6 +51,8 @@
       (arrow-off :left))
     (when-not (= (:direction @car-state) :right)
       (arrow-on :right))
+    (when (= (:mode @car-state) :stop)
+      (swap! car-state assoc :mode :forward))
     (change-motors)
     (swap! car-state assoc :direction :right)))
 
@@ -68,6 +62,8 @@
       (arrow-off :right))
     (when-not (= (:direction @car-state) :left)
       (arrow-on :left))
+    (when (= (:mode @car-state) :stop)
+      (swap! car-state assoc :mode :forward))
     (change-motors)
     (swap! car-state assoc :direction :left)))
 
@@ -80,3 +76,11 @@
   (when (> (:speed @car-state) 100 0)
     (swap! car-state update :speed #(- % 10))
     (change-motors)))
+
+(defn drive-stop []
+  (when-not (= (:mode @car-state) :stop)
+    (arrow-off (:mode @car-state))
+    (when-not (= (:direction @car-state) :straight)
+      (arrow-off (:direction @car-state)))
+    (stop-motors)
+    (swap! car-state assoc :mode :stop :direction :straight :speed 0)))
