@@ -101,6 +101,7 @@
                                   (not @speaking?))  ; Ignore sounds when the speaker is on
                   end-of-clip? (and (pos? (.size output-buffer-stream))
                                     (>= empty-frames (:max-empty-frames @config-properties)))]
+              ;(log/debug "hs?" has-sound? "eoc?" end-of-clip? "ef" empty-frames "rms" rms)
               (if end-of-clip?
                 (end-the-clip output-buffer-stream microphone-chan)
                 (when (or has-sound? (zero? empty-frames)) ; Include 1 empty frame at end to avoid clipping.

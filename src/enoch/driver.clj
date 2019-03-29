@@ -1,5 +1,6 @@
 (ns enoch.driver "Literally drives the car."
   (:require [taoensso.timbre :as log]
+            [enoch.config :refer [config-properties]]
             [enoch.motor-shield :refer :all]))
 
 (log/refer-timbre)
@@ -7,65 +8,73 @@
 (def car-state (atom {:mode :stop :direction :straight :speed 0}))
 
 (defn change-motors []
-  (when-not (= (:mode @car-state) :stop)
-    (doseq [id [:front-right :back-right]]
-      ((if (= (:mode @car-state) :forward) motor-forward motor-reverse) id
-        (if (= (:direction @car-state) :right) (/ (:speed @car-state) 2) (:speed @car-state))))
-    (doseq [id [:front-left :back-left]]
-      ((if (= (:mode @car-state) :forward) motor-forward motor-reverse) id
-        (if (= (:direction @car-state) :left) (/ (:speed @car-state) 2) (:speed @car-state))))))
+  (log/info "car state" (pr-str @car-state))
+  (let [{:keys [mode direction speed]} @car-state]
+    (when-not (= mode :stop)
+      (doseq [id [:front-right :back-right]]
+        ((if (= mode :forward) motor-forward motor-reverse) id
+          (if (= direction :right) (/ speed 2) speed)))
+      (doseq [id [:front-left :back-left]]
+        ((if (= mode :forward) motor-forward motor-reverse) id
+          (if (= direction :left) (/ speed 2) speed))))))
 
 (defn stop-motors []
   (doseq [id [:front-left :front-right :back-left :back-right]]
     (motor-stop id)))
 
 (defn drive-forward []
-  (when-not (and (= (:mode @car-state) :forward) (= (:direction @car-state) :straight))
-    (when (= (:mode @car-state) :reverse)
-      (arrow-off :back)
-      (stop-motors)
-      (Thread/sleep 333))
-    (when-not (= (:direction @car-state) :straight)
-      (arrow-off (:direction @car-state)))
-    (when-not (= (:mode @car-state) :forward)
-      (arrow-on :front))
-    (change-motors)
-    (swap! car-state assoc :mode :forward :direction :straight)))
+  (let [{:keys [mode direction speed]} @car-state]
+    (when-not (and (= mode :forward) (= direction :straight))
+      (when (= mode :reverse)
+        (arrow-off :back)
+      	(stop-motors)
+        (Thread/sleep 333))
+      (when-not (= direction :straight)
+        (arrow-off direction))
+      (when-not (= mode :forward)
+        (arrow-on :front))
+      (swap! car-state assoc :mode :forward :direction :straight
+             :speed (if (pos? speed) speed (:default-speed @config-properties)))
+      (change-motors))))
 
 (defn drive-reverse []
-  (when-not (and (= (:mode @car-state) :reverse) (= (:direction @car-state) :straight))
-    (when (= (:mode @car-state) :forward)
-      (arrow-off :front)
-      (stop-motors)
-      (Thread/sleep 333))
-    (when-not (= (:direction @car-state) :straight)
-      (arrow-off (:direction @car-state)))
-    (when-not (= (:mode @car-state) :reverse)
-      (arrow-on :back))
-    (change-motors)
-  (swap! car-state assoc :mode :reverse :direction :straight)))
+  (let [{:keys [mode direction speed]} @car-state]
+    (when-not (and (= mode :reverse) (= direction :straight))
+      (when (= mode :forward)
+        (arrow-off :front)
+        (stop-motors)
+        (Thread/sleep 333))
+      (when-not (= direction :straight)
+        (arrow-off direction))
+      (when-not (= mode :reverse)
+        (arrow-on :back))
+      (swap! car-state assoc :mode :reverse :direction :straight
+           :speed (if (pos? speed) speed (:default-speed @config-properties)))
+      (change-motors))))
 
 (defn drive-right []
-  (when-not (= (:direction :right))
-    (when (= (:direction @car-state) :left)
-      (arrow-off :left))
-    (when-not (= (:direction @car-state) :right)
-      (arrow-on :right))
-    (when (= (:mode @car-state) :stop)
-      (swap! car-state assoc :mode :forward))
-    (change-motors)
-    (swap! car-state assoc :direction :right)))
+  (let [{:keys [mode direction speed]} @car-state]
+    (when-not (= direction :right)
+      (when (= direction :left)
+        (arrow-off :left))
+      (when-not (= direction :right)
+        (arrow-on :right))
+      (when (= mode :stop)
+        (swap! car-state assoc :mode :forward))
+      (swap! car-state assoc :direction :right)
+      (change-motors))))
 
 (defn drive-left []
-  (when-not (= (:direction :left))
-    (when (= (:direction @car-state) :right)
-      (arrow-off :right))
-    (when-not (= (:direction @car-state) :left)
-      (arrow-on :left))
-    (when (= (:mode @car-state) :stop)
-      (swap! car-state assoc :mode :forward))
-    (change-motors)
-    (swap! car-state assoc :direction :left)))
+  (let [{:keys [mode direction speed]} @car-state]
+    (when-not (= direction :left)
+      (when (= direction :right)
+        (arrow-off :right))
+      (when-not (= direction :left)
+        (arrow-on :left))
+      (when (= mode :stop)
+        (swap! car-state assoc :mode :forward))
+      (swap! car-state assoc :direction :left)
+      (change-motors))))
 
 (defn drive-faster []
   (when (< (:speed @car-state) 100)
@@ -73,14 +82,15 @@
     (change-motors)))
 
 (defn drive-slower []
-  (when (> (:speed @car-state) 100 0)
+  (when (> (:speed @car-state) 0)
     (swap! car-state update :speed #(- % 10))
     (change-motors)))
 
 (defn drive-stop []
-  (when-not (= (:mode @car-state) :stop)
-    (arrow-off (if (= (:mode @car-state) :forward) :front :back))
-    (when-not (= (:direction @car-state) :straight)
-      (arrow-off (:direction @car-state)))
-    (stop-motors)
-    (swap! car-state assoc :mode :stop :direction :straight :speed 0)))
+  (let [{:keys [mode direction speed]} @car-state]
+    (when-not (= mode :stop)
+      (arrow-off (if (= mode :forward) :front :back))
+      (when-not (= direction :straight)
+        (arrow-off direction))
+      (swap! car-state assoc :mode :stop :direction :straight :speed 0)
+      (stop-motors))))

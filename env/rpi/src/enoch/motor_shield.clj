@@ -52,12 +52,6 @@
 
 
 ;;; Motor
-;;;     ____
-;;;    | ^^ |
-;;; 3 O|    |O 1
-;;;    |    |
-;;; 4 O|    |O 2
-;;;    |____|
 
 
 (defn motor-init "Initialize a motor with an id of :front-left :front-right :back-left :back-right."
