@@ -23,12 +23,18 @@
         (case command
           (:forward :reverse :left :right :faster :slower)
           (do
-            (async/put! speaker-chan (str "Going " (symbol command)))
+            (async/put! speaker-chan (str (if (= (:language @config-properties) :de)
+	                                     "Ich gehe "
+	                                     "Going ") (symbol command)))
             ((command command-actions)))
           :stop (do
-                  (async/put! speaker-chan "Stopping" )
+                  (async/put! speaker-chan (if (= (:language @config-properties) :de)
+		                              "Ich halte an"
+		                              "Stopping"))
                   ((command command-actions)))
           :shutdown (do
-                      (async/put! speaker-chan "Shutting down" )
+                      (async/put! speaker-chan (if (= (:language @config-properties) :de)
+		                                  "Ich fahre ab"
+		                                  "Shutting down"))
                       ((command command-actions) shutdown-chan)))
         (recur (async/<! command-chan))))))

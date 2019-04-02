@@ -53,7 +53,7 @@
       (change-motors))))
 
 (defn drive-right []
-  (let [{:keys [mode direction speed]} @car-state]
+  (let [{:keys [mode direction]} @car-state]
     (when-not (= direction :right)
       (when (= direction :left)
         (arrow-off :left))
@@ -65,7 +65,7 @@
       (change-motors))))
 
 (defn drive-left []
-  (let [{:keys [mode direction speed]} @car-state]
+  (let [{:keys [mode direction]} @car-state]
     (when-not (= direction :left)
       (when (= direction :right)
         (arrow-off :right))
@@ -87,7 +87,7 @@
     (change-motors)))
 
 (defn drive-stop []
-  (let [{:keys [mode direction speed]} @car-state]
+  (let [{:keys [mode direction]} @car-state]
     (when-not (= mode :stop)
       (arrow-off (if (= mode :forward) :front :back))
       (when-not (= direction :straight)

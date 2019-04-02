@@ -56,6 +56,7 @@
       ;; Start I/O threads.
       (do-ultrasonic-sensor (:ultrasonic-sensor-boundary @config-properties) command-chan)
 
+      (log/info "Enoch started")
       (async/<!! shutdown-chan)
       (catch Exception e
         (log/error e "Error running enoch"))

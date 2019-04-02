@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+if [[ "$HOSTTYPE" == "arm" ]] ; then
+  PROFILE=rpi
+else
+  PROFILE=mac
+fi
+
+lein with-profile +$PROFILE run

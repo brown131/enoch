@@ -76,8 +76,8 @@
         clip (amplify-sound-clip shorts peak)
         wave-buffer (create-wave-buffer clip num-bytes)]
     ;; Wave file is for testing only.
-    ;(with-open [out (io/output-stream (io/file (str "/tmp/" (System/currentTimeMillis) ".wav")))]
-    ;  (.write out (byte-array wave-buffer) 0 (count wave-buffer)))
+    (with-open [out (io/output-stream (io/file (str "/tmp/" (System/currentTimeMillis) ".wav")))]
+      (.write out (byte-array wave-buffer) 0 (count wave-buffer)))
 
     (async/put! microphone-chan wave-buffer)))
 

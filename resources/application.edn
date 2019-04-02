@@ -2,6 +2,6 @@
  :noise-threshold 300.0
  :max-empty-frames 2
  :default-speed 40
- :language "EN-us" ; "de-DE"
+ :language :de ; :en
  :response-format "simple"
  :stt-request-url "https://eastus.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=%s&format=%s"}

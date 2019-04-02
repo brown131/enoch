@@ -1,8 +1,9 @@
 (ns enoch.speaker
   (:require [clojure.core.async :as async]
+            [clojure.java.io :refer [file output-stream]]
             [clojure.java.shell :refer [sh]]
             [taoensso.timbre :as log]
-            [clojure.java.io :refer [file output-stream]]))
+            [enoch.config :refer :all]))
 
 (log/refer-timbre)
 
@@ -32,7 +33,8 @@
     (try
       (loop [text (async/<! speaker-chan)]
         (when text
-          (espeak text {:amplitude 50 :pitch 90 :speed 150 :voice "en-gb"})
+          (espeak text {:amplitude 50 :pitch 90 :speed 150
+	                :voice (if (= (:language @config-properties) :de) "de-DE" "en-gb")})
           (recur (async/<! speaker-chan))))
       (catch Exception e
         (log/error e "Error playing speaker.")))))
